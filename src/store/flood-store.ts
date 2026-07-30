@@ -8,6 +8,15 @@ export interface RAGMessage {
   timestamp: Date;
 }
 
+export interface AlertEvent {
+  id: string;
+  wardId: string;
+  wardName: string;
+  oldSeverity: number;
+  newSeverity: number;
+  timestamp: Date;
+}
+
 interface FloodState {
   selectedWardId: string | null;
   setSelectedWard: (id: string | null) => void;
@@ -33,10 +42,19 @@ interface FloodState {
   criticalAlertVisible: boolean;
   setCriticalAlert: (visible: boolean) => void;
 
-  sidebarCollapsed: boolean;
-  toggleSidebar: () => void;
   ragPanelOpen: boolean;
   toggleRAGPanel: () => void;
+
+  // Pinned wards for sidebar
+  pinnedWards: string[];
+  togglePinnedWard: (id: string) => void;
+
+  // Alert history feed
+  alertHistory: AlertEvent[];
+
+  // Ward popup position (screen coords for map popup)
+  popupPosition: { x: number; y: number } | null;
+  setPopupPosition: (pos: { x: number; y: number } | null) => void;
 }
 
 function computeSeverity(ward: Ward, timeIdx: number): number {
@@ -79,12 +97,33 @@ export const useFloodStore = create<FloodState>((set, get) => ({
 
   wardSeverities: {},
   updateSeverities: () => {
-    const { timeIndex, selectedWardId } = get();
+    const { timeIndex, selectedWardId, wardSeverities: oldSeverities } = get();
     const newSeverities: Record<string, number> = {};
+    const newAlerts: AlertEvent[] = [];
+
     mumbaiWards.forEach((ward) => {
-      newSeverities[ward.id] = computeSeverity(ward, timeIndex);
+      const newSev = computeSeverity(ward, timeIndex);
+      newSeverities[ward.id] = newSev;
+
+      // Track severity changes for alert feed
+      const oldSev = oldSeverities[ward.id];
+      if (oldSev !== undefined && oldSev !== newSev) {
+        newAlerts.push({
+          id: `alert-${Date.now()}-${ward.id}`,
+          wardId: ward.id,
+          wardName: ward.name,
+          oldSeverity: oldSev,
+          newSeverity: newSev,
+          timestamp: new Date(),
+        });
+      }
     });
-    set({ wardSeverities: newSeverities });
+
+    set((state) => ({
+      wardSeverities: newSeverities,
+      alertHistory: [...newAlerts, ...state.alertHistory].slice(0, 50),
+    }));
+
     if (selectedWardId && newSeverities[selectedWardId] === 3) {
       set({ criticalAlertVisible: true });
     } else {
@@ -112,8 +151,19 @@ export const useFloodStore = create<FloodState>((set, get) => ({
   criticalAlertVisible: false,
   setCriticalAlert: (visible) => set({ criticalAlertVisible: visible }),
 
-  sidebarCollapsed: false,
-  toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   ragPanelOpen: false,
   toggleRAGPanel: () => set((s) => ({ ragPanelOpen: !s.ragPanelOpen })),
+
+  pinnedWards: ['11', '10', '20', '4', '23'], // Default: critical/high-risk wards
+  togglePinnedWard: (id) =>
+    set((s) => ({
+      pinnedWards: s.pinnedWards.includes(id)
+        ? s.pinnedWards.filter((w) => w !== id)
+        : [...s.pinnedWards, id],
+    })),
+
+  alertHistory: [],
+
+  popupPosition: null,
+  setPopupPosition: (pos) => set({ popupPosition: pos }),
 }));

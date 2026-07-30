@@ -44,25 +44,38 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: #0D0E11;
-  --foreground: #f0f0f0;
-  --card: #14161D;
-  --card-foreground: #f0f0f0;
-  --popover: #14161D;
-  --popover-foreground: #f0f0f0;
-  --primary: #F59E0B;
-  --primary-foreground: #0a0a0a;
-  --secondary: #1A1D24;
-  --secondary-foreground: #f0f0f0;
-  --muted: #1A1D24;
-  --muted-foreground: #9CA3AF;
-  --accent: #F59E0B;
-  --accent-foreground: #0a0a0a;
-  --destructive: #EF4444;
-  --border: rgba(255,255,255,0.06);
-  --input: rgba(255,255,255,0.06);
-  --ring: #F59E0B;
+  --radius: 0.5rem;
+  --background: #0B0D12;
+  --foreground: #E1E4EA;
+  --card: #13161D;
+  --card-foreground: #E1E4EA;
+  --popover: #13161D;
+  --popover-foreground: #E1E4EA;
+  --primary: #5B8DEF;
+  --primary-foreground: #0B0D12;
+  --secondary: #1A1E27;
+  --secondary-foreground: #E1E4EA;
+  --muted: #1A1E27;
+  --muted-foreground: #8B919E;
+  --accent: #5B8DEF;
+  --accent-foreground: #0B0D12;
+  --destructive: #D94444;
+  --border: #242832;
+  --input: #242832;
+  --ring: #5B8DEF;
+  --chart-1: #5B8DEF;
+  --chart-2: #8B919E;
+  --chart-3: #4A6FA5;
+  --chart-4: #D94444;
+  --chart-5: #7C8594;
+  --sidebar: #0F1117;
+  --sidebar-foreground: #E1E4EA;
+  --sidebar-primary: #5B8DEF;
+  --sidebar-primary-foreground: #0B0D12;
+  --sidebar-accent: #1A1E27;
+  --sidebar-accent-foreground: #E1E4EA;
+  --sidebar-border: #242832;
+  --sidebar-ring: #5B8DEF;
 }
 
 @layer base {
@@ -84,51 +97,46 @@
   }
 }
 
-/* Custom scrollbar */
+/* Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 3px;
+  width: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.06);
+  background: #242832;
   border-radius: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,255,255,0.12);
+  background: #343A47;
 }
 
-/* MapLibre control overrides — Refinity style */
+/* MapLibre controls */
 .maplibregl-ctrl-bottom-left,
 .maplibregl-ctrl-bottom-right {
-  bottom: 100px !important;
+  bottom: 80px !important;
 }
 .maplibregl-ctrl-group {
-  background: rgba(20, 22, 29, 0.85) !important;
-  backdrop-filter: blur(20px) !important;
-  border: 1px solid rgba(255,255,255,0.06) !important;
-  border-radius: 10px !important;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.3) !important;
+  background: #13161D !important;
+  border: 1px solid #242832 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
 }
 .maplibregl-ctrl-group button {
-  filter: invert(1) brightness(0.6);
-  width: 36px !important;
-  height: 36px !important;
+  filter: invert(1) brightness(0.5);
+  width: 32px !important;
+  height: 32px !important;
 }
 .maplibregl-ctrl-group button + button {
-  border-top-color: rgba(255,255,255,0.06) !important;
+  border-top-color: #242832 !important;
 }
 .maplibregl-ctrl-scale {
-  background: rgba(20, 22, 29, 0.7) !important;
-  backdrop-filter: blur(10px) !important;
-  border: 1px solid rgba(255,255,255,0.06) !important;
-  border-radius: 6px !important;
-  color: rgba(255,255,255,0.4) !important;
+  background: #13161D !important;
+  border: 1px solid #242832 !important;
+  border-radius: 4px !important;
+  color: #8B919E !important;
   font-size: 10px !important;
-}
-.maplibregl-ctrl-scale-line {
-  border-color: rgba(255,255,255,0.2) !important;
 }
 .maplibregl-popup-content {
   background: transparent !important;
@@ -143,24 +151,75 @@
   display: none !important;
 }
 
-/* Range input styling — amber slider */
+/* Range input */
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  background: #F59E0B;
+  background: #5B8DEF;
   cursor: pointer;
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
-  border: 2px solid rgba(255,255,255,0.15);
+  border: 2px solid #242832;
 }
 input[type=range]::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  background: #F59E0B;
+  background: #5B8DEF;
   cursor: pointer;
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
-  border: 2px solid rgba(255,255,255,0.15);
+  border: 2px solid #242832;
+}
+
+/* ── Cesium viewer overrides ── */
+.cesium-viewer {
+  font-family: inherit;
+  width: 100% !important;
+  height: 100% !important;
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+}
+.cesium-widget {
+  width: 100% !important;
+  height: 100% !important;
+  position: relative !important;
+}
+.cesium-widget canvas {
+  width: 100% !important;
+  height: 100% !important;
+  outline: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.cesium-viewer-toolbar,
+.cesium-viewer-animationContainer,
+.cesium-viewer-timelineContainer,
+.cesium-viewer-bottom,
+.cesium-viewer-fullscreenContainer,
+.cesium-viewer-vrContainer,
+.cesium-viewer-geocoderContainer,
+.cesium-viewer-selectionIndicatorContainer,
+.cesium-viewer-infoBoxContainer,
+.cesium-navigationHelpButton-wrapper,
+.cesium-baseLayerPicker-dropDown,
+.cesium-sceneModePicker-wrapper {
+  display: none !important;
+}
+.cesium-widget-credits {
+  background: transparent !important;
+  font-size: 9px !important;
+  opacity: 0.3;
+  pointer-events: none;
+}
+.cesium-credit-logoContainer {
+  display: none !important;
+}
+.cesium-credit-textContainer {
+  color: #525866 !important;
+}
+.cesium-widget canvas {
+  outline: none;
 }

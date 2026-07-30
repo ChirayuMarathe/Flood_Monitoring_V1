@@ -3,10 +3,18 @@
 import { useState, useEffect, useRef } from 'react';
 
 export function AnimatedNumber({ value, decimals = 0 }: { value: number; decimals?: number }) {
+  const [mounted, setMounted] = useState(false);
   const [display, setDisplay] = useState(value);
   const prevRef = useRef(value);
 
   useEffect(() => {
+    setMounted(true);
+    setDisplay(value);
+    prevRef.current = value;
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     const start = prevRef.current;
     const end = value;
     if (start === end) return;
@@ -23,7 +31,12 @@ export function AnimatedNumber({ value, decimals = 0 }: { value: number; decimal
 
     requestAnimationFrame(animate);
     prevRef.current = value;
-  }, [value]);
+  }, [value, mounted]);
+
+  // During SSR and initial render, show a placeholder that won't cause hydration mismatch
+  if (!mounted) {
+    return <span suppressHydrationWarning>{value.toFixed(decimals)}</span>;
+  }
 
   return <span>{display.toFixed(decimals)}</span>;
 }

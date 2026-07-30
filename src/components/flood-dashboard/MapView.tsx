@@ -15,57 +15,43 @@ const MUMBAI_BOUNDS: [[number, number], [number, number]] = [
   [73.0, 19.30],
 ];
 
-function getWardFill(severity: number): [number, number, number, number] {
-  switch (severity) {
-    case 0: return [16, 185, 129, 25];
-    case 1: return [245, 158, 11, 35];
-    case 2: return [245, 158, 11, 55];
-    case 3: return [239, 68, 68, 70];
-    default: return [16, 185, 129, 25];
-  }
-}
-
-function getWaterColor(severity: number): [number, number, number, number] {
-  switch (severity) {
-    case 1: return [245, 158, 11, 30];
-    case 2: return [239, 120, 40, 50];
-    case 3: return [239, 68, 68, 70];
-    default: return [245, 158, 11, 30];
-  }
-}
-
-function getWaterHeight(severity: number): number {
-  return severity === 3 ? 600 : severity === 2 ? 350 : severity === 1 ? 120 : 0;
+function getSevAlpha(severity: number): number {
+  return severity === 3 ? 55 : severity === 2 ? 35 : severity === 1 ? 20 : 10;
 }
 
 function buildLayers(
   wardSeverities: Record<string, number>,
   selectedWardId: string | null,
-  setSelectedWard: (id: string | null) => void
+  setSelectedWard: (id: string | null) => void,
+  setPopupPosition: (pos: { x: number; y: number } | null) => void
 ) {
   const geojson = getWardGeoJSON();
   const layers: any[] = [];
 
-  // Ward boundary fills — subtle, understated
+  // Ward boundary fills — monochrome with intensity based on severity
   layers.push(
     new GeoJsonLayer({
       id: 'ward-boundaries-fill',
       data: geojson,
       filled: true,
       getFillColor: (f: any) => {
-        const sev = wardSeverities[f.properties.id] ?? f.properties.severity ?? 0;
-        return getWardFill(sev);
+        const sev = wardSeverities[f.properties.id] ?? 0;
+        if (sev === 3) return [217, 68, 68, 40];
+        return [91, 141, 239, getSevAlpha(sev)];
       },
-      getLineColor: [255, 255, 255, 15],
+      getLineColor: [255, 255, 255, 8],
       getLineWidth: 1,
       pickable: true,
       onClick: (info) => {
         if (info.object?.properties?.id) {
           setSelectedWard(String(info.object.properties.id));
+          if (info.coordinate) {
+            setPopupPosition({ x: info.x, y: info.y });
+          }
         }
       },
       autoHighlight: true,
-      highlightColor: [255, 255, 255, 25],
+      highlightColor: [91, 141, 239, 30],
     })
   );
 
@@ -77,17 +63,17 @@ function buildLayers(
       stroked: true,
       filled: false,
       getLineColor: (f: any) => {
-        if (String(f.properties.id) === selectedWardId) return [245, 158, 11, 180];
-        return [255, 255, 255, 12];
+        if (String(f.properties.id) === selectedWardId) return [91, 141, 239, 180];
+        return [255, 255, 255, 8];
       },
       getLineWidth: (f: any) => (String(f.properties.id) === selectedWardId ? 2 : 0.5),
     })
   );
 
-  // Water flood overlay — amber/red volumetric
+  // Water flood overlay for severity >= 2
   const floodWards = mumbaiWards.filter((w) => {
     const sev = wardSeverities[w.id] ?? w.severity;
-    return sev >= 1;
+    return sev >= 2;
   });
 
   if (floodWards.length > 0) {
@@ -106,69 +92,88 @@ function buildLayers(
         data: { type: 'FeatureCollection', features: waterFeatures },
         filled: true,
         extruded: true,
-        getFillColor: (f: any) => getWaterColor(f.properties.severity),
-        getElevation: (f: any) => getWaterHeight(f.properties.severity),
-        getLineColor: (f: any) => {
+        getFillColor: (f: any) => {
           const s = f.properties.severity;
-          if (s === 3) return [239, 68, 68, 50];
-          if (s === 2) return [245, 158, 11, 40];
-          return [245, 158, 11, 25];
+          if (s === 3) return [217, 68, 68, 45];
+          return [91, 141, 239, 30];
         },
+        getElevation: (f: any) => (f.properties.severity === 3 ? 500 : 250),
+        getLineColor: [91, 141, 239, 15],
         getLineWidth: 1,
       })
     );
   }
 
-  // Buildings for selected ward — dark charcoal with subtle edge lighting
+  // 3D Buildings for all wards
+  mumbaiWards.forEach((ward) => {
+    const isSelected = ward.id === selectedWardId;
+    layers.push(
+      new PolygonLayer({
+        id: `buildings-${ward.id}`,
+        data: ward.buildings.map((b) => ({ polygon: b.coordinates, height: b.height })),
+        extruded: true,
+        getPolygon: (d: any) => d.polygon,
+        getElevation: (d: any) => d.height,
+        getFillColor: isSelected ? [30, 35, 50, 220] : [20, 24, 32, 160],
+        getLineColor: isSelected ? [60, 68, 90, 100] : [36, 40, 50, 60],
+        getLineWidth: 0.5,
+        pickable: false,
+      })
+    );
+  });
+
+  // Ward center markers — simple circles, monochrome + red for critical
+  layers.push(
+    new ScatterplotLayer({
+      id: 'ward-markers',
+      data: mumbaiWards.map((w) => ({
+        position: w.center,
+        severity: wardSeverities[w.id] ?? 0,
+        id: w.id,
+        isSelected: w.id === selectedWardId,
+      })),
+      getPosition: (d: any) => d.position,
+      getRadius: (d: any) => (d.isSelected ? 100 : 70),
+      getFillColor: (d: any) => {
+        if (d.severity === 3) return [217, 68, 68, 200];
+        if (d.isSelected) return [91, 141, 239, 220];
+        return [139, 145, 158, 140];
+      },
+      getLineColor: [11, 13, 18, 180],
+      getLineWidth: 2,
+      stroked: true,
+      pickable: true,
+      onClick: (info) => {
+        if (info.object?.id) {
+          setSelectedWard(String(info.object.id));
+          setPopupPosition({ x: info.x, y: info.y });
+        }
+      },
+    })
+  );
+
+  // Evacuation route for selected ward
   if (selectedWardId) {
     const ward = mumbaiWards.find((w) => w.id === selectedWardId);
-    if (ward) {
+    if (ward && ward.evacuationRoute.length > 1) {
       layers.push(
-        new PolygonLayer({
-          id: 'buildings',
-          data: ward.buildings.map((b) => ({ polygon: b.coordinates, height: b.height })),
-          extruded: true,
-          getPolygon: (d: any) => d.polygon,
-          getElevation: (d: any) => d.height,
-          getFillColor: [30, 33, 40, 220],
-          getLineColor: [60, 65, 75, 120],
-          getLineWidth: 0.8,
-          pickable: true,
+        new PathLayer({
+          id: 'evacuation-route',
+          data: [{ path: ward.evacuationRoute }],
+          getPath: (d: any) => d.path,
+          getColor: [91, 141, 239, 160],
+          getWidth: 3,
+          widthMinPixels: 2,
         })
       );
 
-      // Evacuation route — amber neon
-      if (ward.evacuationRoute.length > 1) {
-        layers.push(
-          new PathLayer({
-            id: 'evacuation-route',
-            data: [{ path: ward.evacuationRoute }],
-            getPath: (d: any) => d.path,
-            getColor: [245, 158, 11, 200],
-            getWidth: 3,
-            widthMinPixels: 2,
-          })
-        );
-
-        layers.push(
-          new ScatterplotLayer({
-            id: 'evacuation-waypoints',
-            data: ward.evacuationRoute.map((c) => ({ position: c })),
-            getPosition: (d: any) => d.position,
-            getRadius: 4,
-            getFillColor: [245, 158, 11, 230],
-          })
-        );
-      }
-
-      // Ward center pin — amber glow
       layers.push(
         new ScatterplotLayer({
-          id: 'ward-center',
-          data: [{ position: ward.center }],
+          id: 'evacuation-waypoints',
+          data: ward.evacuationRoute.map((c) => ({ position: c })),
           getPosition: (d: any) => d.position,
-          getRadius: 7,
-          getFillColor: [245, 158, 11, 230],
+          getRadius: 4,
+          getFillColor: [91, 141, 239, 200],
         })
       );
     }
@@ -186,16 +191,15 @@ export default function MapView() {
   const wardSeverities = useFloodStore((s) => s.wardSeverities);
   const selectedWardId = useFloodStore((s) => s.selectedWardId);
   const setSelectedWard = useFloodStore((s) => s.setSelectedWard);
+  const setPopupPosition = useFloodStore((s) => s.setPopupPosition);
   const updateSeverities = useFloodStore((s) => s.updateSeverities);
 
-  // Update deck layers when data changes
   useEffect(() => {
     if (!deckRef.current || !mapRef.current) return;
-    const layers = buildLayers(wardSeverities, selectedWardId, setSelectedWard);
+    const layers = buildLayers(wardSeverities, selectedWardId, setSelectedWard, setPopupPosition);
     deckRef.current.setProps({ layers });
-  }, [wardSeverities, selectedWardId, setSelectedWard]);
+  }, [wardSeverities, selectedWardId, setSelectedWard, setPopupPosition]);
 
-  // Initialize map (once)
   useEffect(() => {
     if (initRef.current || !mapContainer.current) return;
     initRef.current = true;
@@ -204,7 +208,7 @@ export default function MapView() {
       container: mapContainer.current,
       style: {
         version: 8,
-        name: 'Mumbai Flood Dark',
+        name: 'Flood Monitor',
         sources: {
           'carto-dark': {
             type: 'raster',
@@ -221,11 +225,13 @@ export default function MapView() {
         glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
       },
       center: MUMBAI_CENTER,
-      zoom: 11,
-      pitch: 45,
-      bearing: -10,
+      zoom: 11.5,
+      pitch: 50,
+      bearing: -12,
       antialias: true,
       maxBounds: MUMBAI_BOUNDS,
+      dragRotate: true,
+      touchZoomRotate: true,
     });
 
     map.addControl(new NavigationControl({ visualizePitch: true }), 'bottom-right');
@@ -233,28 +239,27 @@ export default function MapView() {
 
     mapRef.current = map;
 
-    // Wait for map to load, then initialize deck.gl with shared GL context
     map.on('load', () => {
       const mapCanvas = map.getCanvas() as HTMLCanvasElement;
       const layers = buildLayers(
         useFloodStore.getState().wardSeverities,
         useFloodStore.getState().selectedWardId,
-        useFloodStore.getState().setSelectedWard
+        useFloodStore.getState().setSelectedWard,
+        useFloodStore.getState().setPopupPosition
       );
       deckRef.current = new Deck({
         canvas: mapCanvas,
         initialViewState: {
           longitude: MUMBAI_CENTER[0],
           latitude: MUMBAI_CENTER[1],
-          zoom: 11,
-          pitch: 45,
-          bearing: -10,
+          zoom: 11.5,
+          pitch: 50,
+          bearing: -12,
         },
         controller: false,
         layers,
       });
 
-      // Sync deck view with map after every frame
       const syncView = () => {
         if (!mapRef.current || !deckRef.current) return;
         const { lng, lat } = mapRef.current.getCenter();
@@ -284,7 +289,6 @@ export default function MapView() {
     };
   }, []);
 
-  // Fly to ward on selection
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !selectedWardId) return;
@@ -294,7 +298,8 @@ export default function MapView() {
       center: ward.center as [number, number],
       zoom: 14,
       pitch: 50,
-      duration: 1500,
+      bearing: -12,
+      duration: 1200,
       essential: true,
     });
   }, [selectedWardId]);
