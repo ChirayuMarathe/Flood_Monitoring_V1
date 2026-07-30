@@ -163,6 +163,11 @@ export default function CesiumMapView() {
       msaaSamples: 2,
     });
 
+    console.log('Cesium initialized! Container dimensions:', {
+      width: containerRef.current.clientWidth,
+      height: containerRef.current.clientHeight
+    });
+
     viewerRef.current = viewer;
 
     // Remove default imagery and add dark basemap
@@ -177,6 +182,9 @@ export default function CesiumMapView() {
     createWorldTerrainAsync().then((terrain) => {
       viewer.scene.terrainProvider = terrain;
       viewer.scene.globe.depthTestAgainstTerrain = true;
+      console.log('Cesium terrain loaded');
+    }).catch(err => {
+      console.error('Failed to load Cesium terrain:', err);
     });
 
     // Add OSM Buildings
@@ -211,9 +219,7 @@ export default function CesiumMapView() {
       // DirectionalLight may not be available in all versions, use SunLight fallback
       viewer.scene.light = new SunLight();
     }
-    viewer.scene.fog.enabled = true;
-    viewer.scene.fog.density = 0.00015;
-    viewer.scene.fog.minimumBrightness = 0.02;
+    viewer.scene.fog.enabled = false;
     viewer.scene.highDynamicRange = false;
     viewer.scene.globe.showGroundAtmosphere = true;
 
@@ -319,12 +325,12 @@ export default function CesiumMapView() {
       }
     }, ScreenSpaceEventType.LEFT_CLICK);
 
-    // Initial camera — immersive street-level building POV over South Mumbai
+    // Initial camera — safe overhead view to guarantee visibility
     viewer.camera.flyTo({
-      destination: Cartesian3.fromDegrees(72.832, 18.930, 400),
+      destination: Cartesian3.fromDegrees(72.8777, 19.0760, 15000), // Mumbai Center, 15km high
       orientation: {
-        heading: CesiumMath.toRadians(35),
-        pitch: CesiumMath.toRadians(-12),
+        heading: CesiumMath.toRadians(0),
+        pitch: CesiumMath.toRadians(-60),
         roll: 0,
       },
       duration: 0,
