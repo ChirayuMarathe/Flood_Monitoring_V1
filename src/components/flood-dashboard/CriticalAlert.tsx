@@ -1,9 +1,8 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, X, ShieldAlert } from 'lucide-react';
+import { X, ShieldAlert } from 'lucide-react';
 import { useFloodStore } from '@/store/flood-store';
-import { severityColorHex } from '@/lib/mumbai-data';
 
 export default function CriticalAlert() {
   const { criticalAlertVisible, setCriticalAlert, selectedWard, selectedWardId, wardSeverities, toggleRAGPanel } = useFloodStore();

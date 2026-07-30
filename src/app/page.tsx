@@ -13,10 +13,10 @@ import { useEffect } from 'react';
 const MapView = dynamic(() => import('@/components/flood-dashboard/MapView'), {
   ssr: false,
   loading: () => (
-    <div className="absolute inset-0 bg-[#080a10] flex items-center justify-center">
+    <div className="absolute inset-0 bg-[#0D0E11] flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
-        <div className="w-10 h-10 border-2 border-[#D4A853]/30 border-t-[#D4A853] rounded-full animate-spin" />
-        <p className="text-xs text-white/30 font-mono">Initializing 3D Engine...</p>
+        <div className="w-10 h-10 border-2 border-amber-500/25 border-t-amber-500 rounded-full animate-spin" />
+        <p className="text-xs text-white/25 font-mono">Initializing 3D Engine...</p>
       </div>
     </div>
   ),
@@ -30,7 +30,7 @@ export default function Home() {
   }, [updateSeverities]);
 
   return (
-    <div className="w-screen h-screen bg-[#080a10] relative overflow-hidden">
+    <div className="w-screen h-screen bg-[#0D0E11] relative overflow-hidden">
       <MapView />
       <div className="absolute inset-0 z-10" style={{ pointerEvents: 'none' }}>
         <LeftSidebar />
