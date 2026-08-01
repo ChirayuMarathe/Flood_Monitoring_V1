@@ -60,7 +60,7 @@ export default function CommandBar() {
   return (
     <div className="relative flex-1 max-w-[480px]" ref={dropdownRef}>
       <div
-        className="flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-text bg-[#13161D] border border-[#242832]"
+        className="flex items-center gap-2.5 px-4 py-2 rounded-full cursor-text bg-white/[0.04] border border-white/10 hover:border-white/20 transition-all backdrop-blur-md"
         onClick={() => {
           setOpen(true);
           setTimeout(() => inputRef.current?.focus(), 50);

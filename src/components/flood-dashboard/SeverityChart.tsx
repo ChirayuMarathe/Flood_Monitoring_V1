@@ -21,7 +21,7 @@ export default function SeverityChart() {
   }));
 
   return (
-    <div className="p-4 rounded-lg bg-[#13161D] border border-[#242832]">
+    <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 backdrop-blur-md">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[13px] font-semibold text-[#E1E4EA]">Severity Distribution</h3>
         <span className="text-[10px] text-[#525866] font-mono">24 wards</span>

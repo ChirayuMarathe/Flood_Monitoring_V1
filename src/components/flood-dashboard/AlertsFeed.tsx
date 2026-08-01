@@ -10,7 +10,7 @@ export default function AlertsFeed() {
   const { alertHistory } = useFloodStore();
 
   return (
-    <div className="rounded-lg overflow-hidden bg-[#13161D] border border-[#242832]">
+    <div className="rounded-xl overflow-hidden bg-white/[0.03] border border-white/10 backdrop-blur-md">
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#242832]">
         <div className="flex items-center gap-2">
           <Bell size={13} className="text-[#8B919E]" />

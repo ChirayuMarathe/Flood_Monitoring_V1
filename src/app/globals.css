@@ -1,5 +1,8 @@
+
+@import url("https://api.fontshare.com/v2/css?f[]=clash-grotesk@400,500,600,700&f[]=satoshi@400,500,700,900&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "cesium/Build/Cesium/Widgets/widgets.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -86,13 +89,11 @@
     @apply bg-background text-foreground;
     margin: 0;
     padding: 0;
-    overflow: hidden;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
   html, body, #__next {
-    height: 100%;
     width: 100%;
   }
 }
@@ -174,25 +175,6 @@ input[type=range]::-moz-range-thumb {
 /* ── Cesium viewer overrides ── */
 .cesium-viewer {
   font-family: inherit;
-  width: 100% !important;
-  height: 100% !important;
-  position: absolute !important;
-  top: 0;
-  left: 0;
-  overflow: hidden;
-}
-.cesium-widget {
-  width: 100% !important;
-  height: 100% !important;
-  position: relative !important;
-}
-.cesium-widget canvas {
-  width: 100% !important;
-  height: 100% !important;
-  outline: none;
-  position: absolute;
-  top: 0;
-  left: 0;
 }
 .cesium-viewer-toolbar,
 .cesium-viewer-animationContainer,

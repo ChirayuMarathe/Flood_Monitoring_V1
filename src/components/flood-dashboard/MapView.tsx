@@ -89,7 +89,7 @@ function buildLayers(
     layers.push(
       new GeoJsonLayer({
         id: 'water-overlay',
-        data: { type: 'FeatureCollection', features: waterFeatures },
+        data: { type: 'FeatureCollection', features: waterFeatures } as any,
         filled: true,
         extruded: true,
         getFillColor: (f: any) => {
@@ -228,7 +228,6 @@ export default function MapView() {
       zoom: 11.5,
       pitch: 50,
       bearing: -12,
-      antialias: true,
       maxBounds: MUMBAI_BOUNDS,
       dragRotate: true,
       touchZoomRotate: true,
@@ -274,11 +273,11 @@ export default function MapView() {
         });
       };
 
-      mapRef.current.on('move', syncView);
-      mapRef.current.on('zoom', syncView);
-      mapRef.current.on('rotate', syncView);
-      mapRef.current.on('pitch', syncView);
-      mapRef.current.on('render', syncView);
+      mapRef.current?.on('move', syncView);
+      mapRef.current?.on('zoom', syncView);
+      mapRef.current?.on('rotate', syncView);
+      mapRef.current?.on('pitch', syncView);
+      mapRef.current?.on('render', syncView);
     });
 
     updateSeverities();

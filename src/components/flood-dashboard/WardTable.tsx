@@ -28,7 +28,7 @@ export default function WardTable() {
   };
 
   return (
-    <div className="rounded-lg overflow-hidden bg-[#13161D] border border-[#242832]">
+    <div className="rounded-xl overflow-hidden bg-white/[0.03] border border-white/10 backdrop-blur-md">
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#242832]">
         <h3 className="text-[13px] font-semibold text-[#E1E4EA]">Ward Risk Assessment</h3>
         <span className="text-[10px] text-[#525866] font-mono">sorted by severity</span>

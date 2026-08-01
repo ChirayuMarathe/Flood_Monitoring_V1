@@ -1,147 +1,70 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import * as Cesium from 'cesium';
 import {
   Viewer,
   Ion,
   createWorldTerrainAsync,
   createOsmBuildingsAsync,
-  IonImageryProvider,
-  GeoJsonDataSource,
+  UrlTemplateImageryProvider,
+  Cartesian3,
+  Math as CesiumMath,
   Color,
+  SunLight,
+  CustomShader,
+  LightingModel,
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
   defined,
-  Cartesian3,
-  Cartesian2,
-  Math as CesiumMath,
-  HeightReference,
-  ColorMaterialProperty,
-  ConstantProperty,
   Entity,
-  JulianDate,
-  UrlTemplateImageryProvider,
-  ImageryLayer,
-  Cartographic,
-  Cesium3DTileStyle,
-  NearFarScalar,
-  LabelStyle,
-  VerticalOrigin,
-  DirectionalLight,
-  SunLight,
 } from 'cesium';
 import { useFloodStore } from '@/store/flood-store';
-import { mumbaiWards, getWardGeoJSON } from '@/lib/mumbai-data';
+import { WardLayer } from '@/lib/gis/WardLayer';
+import { useState } from 'react';
 
 const MUMBAI_CENTER = { lng: 72.8777, lat: 19.076 };
+const PUNE_CENTER = { lng: 73.8567, lat: 18.5204 };
 const CESIUM_TOKEN = process.env.NEXT_PUBLIC_CESIUM_TOKEN || '';
-
-function getSeverityColor(severity: number, alpha: number = 0.35): Color {
-  switch (severity) {
-    case 3: return new Color(0.85, 0.27, 0.27, alpha);   // red
-    case 2: return new Color(0.36, 0.55, 0.94, alpha);   // blue
-    case 1: return new Color(0.55, 0.57, 0.62, alpha);   // muted grey
-    default: return new Color(0.36, 0.55, 0.94, 0.08);   // very faint blue
-  }
-}
-
-function getSeverityOutline(severity: number): Color {
-  switch (severity) {
-    case 3: return new Color(0.85, 0.27, 0.27, 0.8);
-    case 2: return new Color(0.36, 0.55, 0.94, 0.5);
-    case 1: return new Color(0.55, 0.57, 0.62, 0.3);
-    default: return new Color(1, 1, 1, 0.06);
-  }
-}
 
 export default function CesiumMapView() {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Viewer | null>(null);
-  const wardDataSourceRef = useRef<GeoJsonDataSource | null>(null);
+  const wardLayerRef = useRef<WardLayer | null>(null);
   const handlerRef = useRef<ScreenSpaceEventHandler | null>(null);
   const initRef = useRef(false);
 
-  const wardSeverities = useFloodStore((s) => s.wardSeverities);
-  const selectedWardId = useFloodStore((s) => s.selectedWardId);
-  const setSelectedWard = useFloodStore((s) => s.setSelectedWard);
-  const setPopupPosition = useFloodStore((s) => s.setPopupPosition);
-  const setCriticalAlert = useFloodStore((s) => s.setCriticalAlert);
+  const [hoverInfo, setHoverInfo] = useState<{ x: number, y: number, name: string } | null>(null);
 
-  // Update ward entity colors when severities change
-  const updateWardColors = useCallback(() => {
-    const ds = wardDataSourceRef.current;
-    if (!ds) return;
-    const entities = ds.entities.values;
-    for (const entity of entities) {
-      const wardId = entity.properties?.id?.getValue(JulianDate.now());
-      if (!wardId) continue;
-      const sev = wardSeverities[String(wardId)] ?? 0;
-      const isSelected = String(wardId) === selectedWardId;
+  const activeCity = useFloodStore((s) => s.activeCity) as 'mumbai' | 'pune';
 
-      if (entity.polygon) {
-        entity.polygon.material = new ColorMaterialProperty(
-          isSelected
-            ? new Color(0.36, 0.55, 0.94, 0.45)
-            : getSeverityColor(sev)
-        );
-        entity.polygon.outlineColor = new ConstantProperty(
-          isSelected
-            ? new Color(0.36, 0.55, 0.94, 0.9)
-            : getSeverityOutline(sev)
-        );
-        entity.polygon.outlineWidth = new ConstantProperty(isSelected ? 3 : 1);
-
-        // Water extrusion for flood-affected wards
-        if (sev >= 2) {
-          const waterHeight = sev === 3 ? 15 : 8; // exaggerated for visibility on terrain
-          entity.polygon.height = new ConstantProperty(0);
-          entity.polygon.extrudedHeight = new ConstantProperty(waterHeight);
-          entity.polygon.heightReference = new ConstantProperty(HeightReference.RELATIVE_TO_GROUND);
-          entity.polygon.extrudedHeightReference = new ConstantProperty(HeightReference.RELATIVE_TO_GROUND);
-        } else {
-          entity.polygon.extrudedHeight = undefined;
-          entity.polygon.height = new ConstantProperty(0);
-          entity.polygon.heightReference = new ConstantProperty(HeightReference.CLAMP_TO_GROUND);
-        }
-      }
-    }
-  }, [wardSeverities, selectedWardId]);
-
-  useEffect(() => {
-    updateWardColors();
-  }, [updateWardColors]);
-
-  // Fly to selected ward
+  // Handle city switching — reload authentic ward boundaries and fly camera
   useEffect(() => {
     const viewer = viewerRef.current;
-    if (!viewer || !selectedWardId) return;
-    const ward = mumbaiWards.find((w) => w.id === selectedWardId);
-    if (!ward) return;
+    const wardLayer = wardLayerRef.current;
+    if (!viewer || !wardLayer) return;
 
+    // Load new city's raw boundary GeoJSON
+    wardLayer.loadCityWards(activeCity);
+
+    // Fly to new city
+    const center = activeCity === 'pune' ? PUNE_CENTER : MUMBAI_CENTER;
     viewer.camera.flyTo({
-      destination: Cartesian3.fromDegrees(ward.center[0], ward.center[1], 300),
+      destination: Cartesian3.fromDegrees(center.lng, center.lat, activeCity === 'pune' ? 25000 : 25000),
       orientation: {
-        heading: CesiumMath.toRadians(45),
-        pitch: CesiumMath.toRadians(-15),
+        heading: CesiumMath.toRadians(0),
+        pitch: CesiumMath.toRadians(-90), // Top-down view for boundaries
         roll: 0,
       },
-      duration: 1.5,
+      duration: 2.0,
     });
-
-    // Check if critical
-    const sev = wardSeverities[selectedWardId] ?? 0;
-    if (sev >= 3) {
-      setCriticalAlert(true);
-    }
-  }, [selectedWardId, wardSeverities, setCriticalAlert]);
+  }, [activeCity]);
 
   // Initialize viewer
   useEffect(() => {
     if (initRef.current || !containerRef.current || !CESIUM_TOKEN) return;
     initRef.current = true;
 
-    // Set Cesium base URL and token
     (window as any).CESIUM_BASE_URL = '/cesium';
     Ion.defaultAccessToken = CESIUM_TOKEN;
 
@@ -163,67 +86,156 @@ export default function CesiumMapView() {
       msaaSamples: 2,
     });
 
-    console.log('Cesium initialized! Container dimensions:', {
-      width: containerRef.current.clientWidth,
-      height: containerRef.current.clientHeight
-    });
-
     viewerRef.current = viewer;
 
-    // Remove default imagery and add dark basemap
+    // Use Esri World Imagery
     viewer.imageryLayers.removeAll();
-    const darkTiles = new UrlTemplateImageryProvider({
-      url: 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
-      credit: 'CARTO, OSM Contributors',
+    const esriImagery = new UrlTemplateImageryProvider({
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      maximumLevel: 19,
+      credit: 'Esri, Maxar, Earthstar Geographics',
     });
-    viewer.imageryLayers.addImageryProvider(darkTiles);
+    viewer.imageryLayers.addImageryProvider(esriImagery);
 
-    // Enable real terrain
+    // Enable terrain
     createWorldTerrainAsync().then((terrain) => {
       viewer.scene.terrainProvider = terrain;
       viewer.scene.globe.depthTestAgainstTerrain = true;
-      console.log('Cesium terrain loaded');
-    }).catch(err => {
-      console.error('Failed to load Cesium terrain:', err);
-    });
+    }).catch(err => console.error('Failed to load terrain:', err));
 
-    // Add OSM Buildings
+    // Add OSM Buildings with Custom Shader
     createOsmBuildingsAsync().then((osmBuildings) => {
-      viewer.scene.primitives.add(osmBuildings);
-      // Style buildings for visibility — light grey with slight transparency
-      try {
-        osmBuildings.style = new Cesium3DTileStyle({
-          color: "color('rgb(130, 140, 160)', 0.8)",
-        });
-      } catch (e) {
-        // Style not critical
-      }
-    }).catch(() => {
-      // OSM Buildings optional, continue without
-      console.warn('OSM Buildings not available');
-    });
-
-    // Scene settings — enable lighting for shadows and depth
-    viewer.scene.globe.baseColor = Color.fromCssColorString('#0B0D12');
-    viewer.scene.backgroundColor = Color.fromCssColorString('#0B0D12');
-    viewer.scene.globe.enableLighting = true;
-    try {
-      viewer.scene.light = new DirectionalLight({
-        direction: Cartesian3.normalize(
-          new Cartesian3(0.5, -0.5, -0.7),
-          new Cartesian3()
-        ),
-        intensity: 2.0,
+      osmBuildings.customShader = new CustomShader({
+        lightingModel: LightingModel.PBR,
+        fragmentShaderText: `
+          float noise(vec2 p) {
+            return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+          }
+          
+          void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
+            vec3 positionMC = fsInput.attributes.positionMC;
+            vec3 normalEC = fsInput.attributes.normalEC;
+            
+            vec2 bldgId = floor(positionMC.xz / 8.0);
+            float hash = fract(sin(dot(bldgId, vec2(127.1, 311.7))) * 43758.5453);
+            
+            vec3 wallColor;
+            if (hash < 0.125) wallColor = vec3(0.95, 0.92, 0.85);
+            else if (hash < 0.25) wallColor = vec3(0.88, 0.82, 0.72);
+            else if (hash < 0.375) wallColor = vec3(0.85, 0.70, 0.55);
+            else if (hash < 0.5) wallColor = vec3(0.92, 0.85, 0.82);
+            else if (hash < 0.625) wallColor = vec3(0.78, 0.84, 0.90);
+            else if (hash < 0.75) wallColor = vec3(0.90, 0.88, 0.80);
+            else if (hash < 0.875) wallColor = vec3(0.82, 0.80, 0.75);
+            else wallColor = vec3(0.94, 0.90, 0.78);
+            
+            float weathering = noise(positionMC.xz * 2.0) * 0.08;
+            wallColor -= vec3(weathering);
+            
+            float verticalness = 1.0 - abs(dot(normalEC, vec3(0.0, 0.0, 1.0)));
+            
+            if (verticalness > 0.3) {
+              float ux = abs(normalEC.x);
+              float uy = abs(normalEC.y);
+              vec2 wallUV = ux > uy ? positionMC.yz : positionMC.xz;
+              
+              float floorHeight = 3.2;
+              float windowWidth = 2.5;
+              float heightAboveGround = wallUV.y;
+              
+              if (heightAboveGround < 4.0) {
+                float shopBayPos = mod(wallUV.x, 3.5) / 3.5;
+                bool isShopWindow = shopBayPos > 0.08 && shopBayPos < 0.92 && heightAboveGround > 0.8 && heightAboveGround < 3.2;
+                if (isShopWindow) {
+                  material.diffuse = vec3(0.12, 0.14, 0.18);
+                  material.roughness = 0.1;
+                } else {
+                  material.diffuse = wallColor * 0.55;
+                  material.roughness = 0.9;
+                }
+                return;
+              }
+              
+              float floorPos = mod(wallUV.y, floorHeight) / floorHeight;
+              float bayPos = mod(wallUV.x, windowWidth) / windowWidth;
+              
+              float windowMarginV = 0.18;
+              float windowMarginH = 0.22;
+              float slabThickness = 0.08;
+              
+              bool isWindow = bayPos > windowMarginH && bayPos < (1.0 - windowMarginH) && floorPos > (windowMarginV + slabThickness) && floorPos < (1.0 - windowMarginV);
+              bool isSlab = floorPos < slabThickness;
+              
+              float frameThick = 0.03;
+              bool isFrame = !isWindow && ((bayPos > (windowMarginH - frameThick) && bayPos < (1.0 - windowMarginH + frameThick) && floorPos > (windowMarginV + slabThickness - frameThick) && floorPos < (1.0 - windowMarginV + frameThick)));
+              
+              float windowId = floor(wallUV.x / windowWidth) + floor(wallUV.y / floorHeight) * 37.0;
+              bool isAC = fract(sin(windowId * 45.17) * 23421.6315) > 0.7 && bayPos > 0.75 && bayPos < 0.95 && floorPos > 0.15 && floorPos < 0.28;
+              
+              bool isBalcony = fract(sin(windowId * 78.3) * 12345.678) > 0.5 && floorPos > (windowMarginV + slabThickness - 0.02) && floorPos < (windowMarginV + slabThickness + 0.04) && bayPos > 0.1 && bayPos < 0.9;
+              
+              if (isWindow) {
+                material.diffuse = vec3(0.15, 0.22, 0.32);
+                material.roughness = 0.1;
+                float brightness = 0.5 + 0.5 * fract(sin(windowId * 12.9898) * 43758.5453);
+                material.diffuse *= brightness;
+                material.diffuse = mix(material.diffuse, wallColor * 0.25, 0.15);
+              } else if (isAC) {
+                material.diffuse = vec3(0.45, 0.45, 0.43);
+                material.roughness = 0.6;
+              } else if (isFrame) {
+                material.diffuse = wallColor * 0.5;
+                material.roughness = 0.8;
+              } else if (isBalcony) {
+                material.diffuse = wallColor * 0.6;
+                material.roughness = 0.85;
+              } else if (isSlab) {
+                material.diffuse = wallColor * 0.65;
+                material.roughness = 0.85;
+              } else {
+                float wallNoise = noise(wallUV * 8.0) * 0.04;
+                material.diffuse = wallColor - vec3(wallNoise);
+                material.roughness = 0.7;
+              }
+            } else {
+              material.diffuse = material.diffuse * 0.85;
+              material.roughness = 0.9;
+            }
+          }
+        `,
       });
-    } catch (e) {
-      // DirectionalLight may not be available in all versions, use SunLight fallback
-      viewer.scene.light = new SunLight();
+      viewer.scene.primitives.add(osmBuildings);
+    }).catch(() => console.warn('OSM Buildings not available'));
+
+    // Scene settings
+    viewer.scene.globe.baseColor = Color.fromCssColorString('#0B0D12');
+    viewer.scene.globe.enableLighting = true;
+    viewer.scene.light = new SunLight();
+    
+    // Lock clock to 10:00 AM IST (4:30 UTC)
+    viewer.clock.currentTime = Cesium.JulianDate.fromIso8601('2024-07-15T04:30:00Z');
+    viewer.clock.shouldAnimate = false;
+    
+    if (viewer.scene.verticalExaggeration !== undefined) {
+      viewer.scene.verticalExaggeration = 1.5;
     }
-    viewer.scene.fog.enabled = false;
+    
+    if (viewer.scene.postProcessStages) {
+      viewer.scene.postProcessStages.fxaa.enabled = true;
+    }
+
+    viewer.scene.fog.enabled = true;
+    viewer.scene.fog.density = 0.00012;
     viewer.scene.highDynamicRange = false;
     viewer.scene.globe.showGroundAtmosphere = true;
+    if (viewer.scene.skyAtmosphere) {
+      viewer.scene.skyAtmosphere.show = true;
+    }
+    
+    try {
+      viewer.scene.globe.showWaterEffect = true;
+    } catch (e) {}
 
-    // Hide credits bar background but keep attribution
     const creditContainer = viewer.cesiumWidget.creditContainer as HTMLElement;
     if (creditContainer) {
       creditContainer.style.background = 'transparent';
@@ -231,117 +243,71 @@ export default function CesiumMapView() {
       creditContainer.style.fontSize = '9px';
     }
 
-    // Load ward boundary GeoJSON
-    const geojson = getWardGeoJSON();
-    GeoJsonDataSource.load(geojson, {
-      stroke: Color.WHITE.withAlpha(0.1),
-      fill: new Color(0.36, 0.55, 0.94, 0.1),
-      strokeWidth: 1,
-      clampToGround: true,
-    }).then((ds) => {
-      viewer.dataSources.add(ds);
-      wardDataSourceRef.current = ds;
-
-      // Apply initial colors
-      const entities = ds.entities.values;
-      for (const entity of entities) {
-        if (entity.polygon) {
-          entity.polygon.outline = new ConstantProperty(false); // Outlines unsupported on terrain
-          entity.polygon.height = new ConstantProperty(0);
-          entity.polygon.heightReference = new ConstantProperty(HeightReference.CLAMP_TO_GROUND);
-        }
-      }
-
-      // Update with current severities
-      const state = useFloodStore.getState();
-      const severities = state.wardSeverities;
-      for (const entity of entities) {
-        const wardId = entity.properties?.id?.getValue(JulianDate.now());
-        if (!wardId) continue;
-        const sev = severities[String(wardId)] ?? 0;
-        if (entity.polygon) {
-          entity.polygon.material = new ColorMaterialProperty(getSeverityColor(sev));
-          entity.polygon.outlineColor = new ConstantProperty(getSeverityOutline(sev));
-        }
-      }
-    });
-
-    // Add ward center markers as point entities
-    for (const ward of mumbaiWards) {
-      const sev = useFloodStore.getState().wardSeverities[ward.id] ?? 0;
-      viewer.entities.add({
-        id: `marker-${ward.id}`,
-        position: Cartesian3.fromDegrees(ward.center[0], ward.center[1]),
-        point: {
-          pixelSize: 8,
-          color: sev >= 3 ? Color.fromCssColorString('#D94444') : Color.fromCssColorString('#5B8DEF'),
-          outlineColor: Color.fromCssColorString('#0B0D12'),
-          outlineWidth: 2,
-          heightReference: HeightReference.CLAMP_TO_GROUND,
-          disableDepthTestDistance: Number.POSITIVE_INFINITY,
-        },
-        label: {
-          text: ward.code,
-          font: '11px sans-serif',
-          fillColor: Color.fromCssColorString('#C1C5CD'),
-          outlineColor: Color.fromCssColorString('#0B0D12'),
-          outlineWidth: 3,
-          style: LabelStyle.FILL_AND_OUTLINE,
-          verticalOrigin: VerticalOrigin.BOTTOM,
-          pixelOffset: new Cartesian2(0, -14),
-          heightReference: HeightReference.CLAMP_TO_GROUND,
-          disableDepthTestDistance: Number.POSITIVE_INFINITY,
-          scaleByDistance: new NearFarScalar(1000, 1, 50000, 0.4),
-        },
-        properties: { wardId: ward.id, wardName: ward.name },
-      });
-    }
-
-    // Click handler
-    const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
-    handlerRef.current = handler;
-
-    handler.setInputAction((movement: any) => {
-      const picked = viewer.scene.pick(movement.position);
-      if (defined(picked) && picked.id) {
-        let wardId: string | null = null;
-
-        // Check if it's a marker entity
-        if (picked.id instanceof Entity) {
-          const props = picked.id.properties;
-          if (props?.wardId) {
-            wardId = String(props.wardId.getValue(JulianDate.now()));
-          }
-          // Check if it's a ward polygon from GeoJSON
-          if (!wardId && props?.id) {
-            wardId = String(props.id.getValue(JulianDate.now()));
-          }
-        }
-
-        if (wardId) {
-          setSelectedWard(wardId);
-          setPopupPosition({ x: movement.position.x, y: movement.position.y });
-        }
-      }
-    }, ScreenSpaceEventType.LEFT_CLICK);
-
-    // Initial camera — safe overhead view to guarantee visibility
+    // Initialize the new modular WardLayer
+    wardLayerRef.current = new WardLayer(viewer);
+    
+    // Load initial city
+    const initialCity = useFloodStore.getState().activeCity as 'mumbai' | 'pune';
+    wardLayerRef.current.loadCityWards(initialCity);
+    
+    // Fly to initial city
+    const center = initialCity === 'pune' ? PUNE_CENTER : MUMBAI_CENTER;
     viewer.camera.flyTo({
-      destination: Cartesian3.fromDegrees(72.8777, 19.0760, 15000), // Mumbai Center, 15km high
+      destination: Cartesian3.fromDegrees(center.lng, center.lat, 25000), // High altitude to see full boundary
       orientation: {
         heading: CesiumMath.toRadians(0),
-        pitch: CesiumMath.toRadians(-60),
+        pitch: CesiumMath.toRadians(-90), // Top-down
         roll: 0,
       },
       duration: 0,
     });
 
+    // Hover Handler
+    const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
+    handlerRef.current = handler;
+    
+    let hoveredEntity: Entity | null = null;
+    let originalMaterial: any = null;
+
+    handler.setInputAction((movement: any) => {
+      const picked = viewer.scene.pick(movement.endPosition);
+      
+      // Reset previous hover
+      if (hoveredEntity && hoveredEntity.polygon && originalMaterial) {
+        hoveredEntity.polygon.material = originalMaterial;
+        hoveredEntity = null;
+        originalMaterial = null;
+        setHoverInfo(null);
+      }
+
+      if (defined(picked) && picked.id instanceof Entity && picked.id.polygon) {
+        hoveredEntity = picked.id;
+        originalMaterial = hoveredEntity.polygon.material;
+        
+        // Highlight material (brighter blue fill)
+        hoveredEntity.polygon.material = new ColorMaterialProperty(new Color(0.2, 0.6, 1.0, 0.4));
+        
+        const props = hoveredEntity.properties;
+        const wardName = props?.normalizedWardName?.getValue(viewer.clock.currentTime);
+        const wardCode = props?.normalizedWardCode?.getValue(viewer.clock.currentTime);
+        
+        if (wardName) {
+          setHoverInfo({
+            x: movement.endPosition.x,
+            y: movement.endPosition.y,
+            name: wardCode && wardCode !== wardName ? `${wardCode} - ${wardName}` : wardName
+          });
+        }
+      }
+    }, ScreenSpaceEventType.MOUSE_MOVE);
+
     return () => {
       handlerRef.current?.destroy();
+      wardLayerRef.current?.removeLayer();
       viewer.destroy();
       initRef.current = false;
     };
-  }, [setSelectedWard, setPopupPosition, setCriticalAlert]);
+  }, []);
 
   if (!CESIUM_TOKEN) {
     return (
@@ -349,11 +315,7 @@ export default function CesiumMapView() {
         <div className="text-center max-w-md px-6">
           <p className="text-[14px] text-[#E1E4EA] font-medium mb-2">Cesium Token Required</p>
           <p className="text-[12px] text-[#525866]">
-            Add your Cesium Ion token to <code className="text-[#5B8DEF]">.env</code> as{' '}
-            <code className="text-[#5B8DEF]">NEXT_PUBLIC_CESIUM_TOKEN</code>
-          </p>
-          <p className="text-[10px] text-[#525866] mt-2">
-            Sign up free at ion.cesium.com
+            Add your Cesium Ion token to <code className="text-[#5B8DEF]">.env</code>
           </p>
         </div>
       </div>
@@ -361,9 +323,24 @@ export default function CesiumMapView() {
   }
 
   return (
-    <div 
-      ref={containerRef} 
-      style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} 
-    />
+    <div className="relative w-full h-full">
+      <div 
+        ref={containerRef} 
+        style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} 
+      />
+      
+      {/* Tooltip for Hover */}
+      {hoverInfo && (
+        <div 
+          className="absolute pointer-events-none px-3 py-1.5 bg-[#0A0A0A]/80 backdrop-blur-md border border-[#ffffff1a] rounded-md text-white text-sm font-medium whitespace-nowrap z-50 transition-opacity duration-75"
+          style={{ 
+            left: hoverInfo.x + 15, 
+            top: hoverInfo.y + 15 
+          }}
+        >
+          {hoverInfo.name}
+        </div>
+      )}
+    </div>
   );
 }

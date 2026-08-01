@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { mumbaiWards, timeSeriesData, type Ward, type TimeSeriesPoint } from '@/lib/mumbai-data';
+import { puneWards } from '@/lib/pune-data';
 
 export interface RAGMessage {
   id: string;
@@ -55,6 +56,11 @@ interface FloodState {
   // Ward popup position (screen coords for map popup)
   popupPosition: { x: number; y: number } | null;
   setPopupPosition: (pos: { x: number; y: number } | null) => void;
+
+  // City switcher
+  activeCity: 'mumbai' | 'pune';
+  switchCity: (city: 'mumbai' | 'pune') => void;
+  getActiveWards: () => Ward[];
 }
 
 function computeSeverity(ward: Ward, timeIdx: number): number {
@@ -83,9 +89,10 @@ export const useFloodStore = create<FloodState>((set, get) => ({
     }
   },
   selectedWard: () => {
-    const { selectedWardId } = get();
+    const { selectedWardId, activeCity } = get();
     if (!selectedWardId) return null;
-    return mumbaiWards.find((w) => w.id === selectedWardId) ?? null;
+    const wards = activeCity === 'pune' ? puneWards : mumbaiWards;
+    return wards.find((w) => w.id === selectedWardId) ?? null;
   },
 
   timeIndex: 14,
@@ -101,7 +108,8 @@ export const useFloodStore = create<FloodState>((set, get) => ({
     const newSeverities: Record<string, number> = {};
     const newAlerts: AlertEvent[] = [];
 
-    mumbaiWards.forEach((ward) => {
+    const wards = get().activeCity === 'pune' ? puneWards : mumbaiWards;
+    wards.forEach((ward) => {
       const newSev = computeSeverity(ward, timeIndex);
       newSeverities[ward.id] = newSev;
 
@@ -166,4 +174,14 @@ export const useFloodStore = create<FloodState>((set, get) => ({
 
   popupPosition: null,
   setPopupPosition: (pos) => set({ popupPosition: pos }),
+
+  activeCity: 'mumbai',
+  switchCity: (city) => {
+    set({ activeCity: city, selectedWardId: null, popupPosition: null });
+    // Recompute severities for the new city
+    setTimeout(() => get().updateSeverities(), 0);
+  },
+  getActiveWards: () => {
+    return get().activeCity === 'pune' ? puneWards : mumbaiWards;
+  },
 }));

@@ -10,6 +10,10 @@ const config: Config = {
   ],
   theme: {
   	extend: {
+      fontFamily: {
+        clash: ['Clash Grotesk', 'sans-serif'],
+        satoshi: ['Satoshi', 'sans-serif'],
+      },
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
