@@ -1,66 +1,77 @@
 import { NextResponse } from 'next/server';
-import { mumbaiWards, severityColors, timeSeriesData } from '@/lib/mumbai-data';
+import OpenAI from 'openai';
+import type { WardRiskProfile, HazardType } from '@/lib/risk/WardRiskProfile';
+import { severityColors } from '@/lib/mumbai-data';
+
+// Constructed per request, not at module scope: the OpenAI client throws when
+// the key is missing, which fails `next build` page-data collection on any
+// machine without OPENAI_API_KEY set.
+function getOpenAI() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
+
+const hazardTypeLabel = (type: HazardType) => {
+  switch (type) {
+    case 'rainfall_overflow': return 'Rainfall Overflow';
+    case 'topographic_pooling': return 'Topographic Pooling';
+    case 'tidal_backflow': return 'Tidal Backflow';
+    case 'river_overflow': return 'River Overflow';
+    case 'compound': return 'Compound Risk';
+    default: return 'Unknown Hazard';
+  }
+};
+
+function buildAlertPrompt(profile: WardRiskProfile): string {
+  const hazardSummary = profile.activeHazards
+    .map((h) => `- ${hazardTypeLabel(h.type)}: ${h.explanation}`)
+    .join("\n");
+
+  const historicalNote = profile.similarHistoricalEvent
+    ? `The closest historical match is ${profile.similarHistoricalEvent.date}, when ${profile.similarHistoricalEvent.outcome.toLowerCase()}.`
+    : "No closely matching historical event was found.";
+
+  return `You are writing a short, clear flood risk alert for emergency planners about ${profile.wardName} in ${profile.city}.
+
+Current severity: ${profile.overallSeverity}/3.
+
+Active contributing factors:
+${hazardSummary}
+
+${historicalNote}
+
+Write a 2-3 sentence plain-language alert using ONLY the numbers and facts given above. Do not invent additional statistics. Do not speculate beyond what the data supports. Be direct and actionable.`;
+}
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  const { wardId, timeIndex = 14, query } = body;
+  try {
+    const profile: WardRiskProfile = await request.json();
 
-  const ward = mumbaiWards.find((w) => w.id === wardId);
-  if (!ward) {
-    return NextResponse.json({ error: 'Ward not found' }, { status: 404 });
+    if (!profile || !profile.wardId) {
+      return NextResponse.json({ error: 'Invalid WardRiskProfile provided' }, { status: 400 });
+    }
+
+    const systemPrompt = buildAlertPrompt(profile);
+
+    const completion = await getOpenAI().chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: 'system', content: systemPrompt }],
+      temperature: 0.2,
+      max_tokens: 400,
+    });
+
+    const aiMessage = completion.choices[0].message.content || 'No response generated.';
+    const sev = severityColors[profile.overallSeverity];
+
+    return NextResponse.json({
+      wardId: profile.wardId,
+      wardName: profile.wardName,
+      severity: profile.overallSeverity,
+      severityLabel: sev.label,
+      response: aiMessage,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('RAG Alert Error:', error);
+    return NextResponse.json({ error: 'Failed to generate AI response' }, { status: 500 });
   }
-
-  const td = timeSeriesData[timeIndex];
-  const sev = severityColors[ward.severity];
-
-  const protocols: Record<number, string> = {
-    0: `INFORM — Ward ${ward.name} (${ward.code}) currently shows NO FLOOD RISK.\n\n` +
-      `Current conditions: 3-day rainfall cumulative at ${td.rainfall_3day_sum}mm, soil moisture at ${(td.soil_moisture * 100).toFixed(0)}%, ` +
-      `land surface temperature ${td.landSurfaceTemp}°C. Mean elevation ${ward.elevation}m and TWI of ${ward.twi} indicate adequate drainage capacity.\n\n` +
-      `Recommended actions: Continue routine monitoring. Ensure all drainage channels are clear. ` +
-      `Review emergency contact lists and verify communication systems are operational. ` +
-      `No evacuation required at this time.`,
-    1: `ADVISORY — Ward ${ward.name} (${ward.code}) is under LOW FLOOD RISK.\n\n` +
-      `3-day rainfall has reached ${td.rainfall_3day_sum}mm with soil moisture at ${(td.soil_moisture * 100).toFixed(0)}%. ` +
-      `Surface temperature is ${td.landSurfaceTemp}°C. Topographic analysis shows mean elevation of ${ward.elevation}m ` +
-      `with a TWI of ${ward.twi}, indicating potential water accumulation in low-lying zones.\n\n` +
-      `Recommended actions: Activate ward-level disaster monitoring team. Deploy water level sensors ` +
-      `at critical drainage points. Pre-position sandbags at known vulnerable locations. ` +
-      `Alert all ground-level response units to standby status. Monitor Mithi River levels if applicable.`,
-    2: `WARNING — Ward ${ward.name} (${ward.code}) is under MODERATE FLOOD RISK.\n\n` +
-      `3-day cumulative rainfall has surged to ${td.rainfall_3day_sum}mm with soil saturation at ${(td.soil_moisture * 100).toFixed(0)}%. ` +
-      `Land surface temperature at ${td.landSurfaceTemp}°C. With mean elevation of only ${ward.elevation}m and TWI of ${ward.twi}, ` +
-      `this ward is highly susceptible to waterlogging and localized flooding.\n\n` +
-      `URGENT ACTIONS REQUIRED:\n` +
-      `1. Begin phased evacuation of residents in ground-floor and basement dwellings.\n` +
-      `2. Deploy emergency pumps at all major drainage intersections.\n` +
-      `3. Activate evacuation route via ${ward.evacuationRoute.length > 0 ? 'designated emergency corridors' : 'primary arterial roads'} to higher elevation zones.\n` +
-      `4. Coordinate with BMC disaster management cell for resource deployment.\n` +
-      `5. Broadcast public alerts through all available channels (SMS, sirens, public address systems).`,
-    3: `CRITICAL ALERT — Ward ${ward.name} (${ward.code}) FLOOD SEVERITY: CRITICAL (Level 3)\n\n` +
-      `EMERGENCY CONDITIONS: 3-day rainfall has exceeded ${td.rainfall_3day_sum}mm. Soil is fully saturated at ${(td.soil_moisture * 100).toFixed(0)}%. ` +
-      `Mean elevation of ${ward.elevation}m combined with TWI of ${ward.twi} indicates water levels expected to exceed 1.5-2.0m ` +
-      `in low-lying areas within the next 2-4 hours.\n\n` +
-      `IMMEDIATE EVACUATION PROTOCOL:\n` +
-      `1. ACTIVATE FULL EVACUATION of all residents below 3m elevation contour.\n` +
-      `2. Primary evacuation route: Follow designated emergency corridors to nearest high-ground shelter. ` +
-      `Avoid low-lying underpasses and subway entrances.\n` +
-      `3. Deploy NDRF teams for assisted evacuation of elderly, differently-abled, and hospital patients.\n` +
-      `4. Shutdown electrical supply in flood-prone zones to prevent electrocution hazards.\n` +
-      `5. Deploy boats for areas where water depth exceeds 0.5m.\n` +
-      `6. Establish emergency medical aid posts at elevated locations.\n` +
-      `7. All BMC emergency operations centers to operate at maximum alert level.\n\n` +
-      `This is a LIFE-THREATENING situation. Do not delay evacuation.`,
-  };
-
-  const message = protocols[ward.severity] || protocols[0];
-
-  return NextResponse.json({
-    wardId,
-    wardName: ward.name,
-    severity: ward.severity,
-    severityLabel: sev.label,
-    response: message,
-    generatedAt: new Date().toISOString(),
-  });
 }

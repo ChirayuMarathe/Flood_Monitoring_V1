@@ -1,0 +1,29 @@
+date,locality_mentioned,lat,lon,ward_name,ward_gid,severity,source,notes
+2017-08-29,,18.92315,72.825,A,1,0,no news mention found (negative example),No flooding reported for this ward in the 29 Aug 2017 event based on available sources
+2017-08-29,,18.95636,72.84014,B,2,0,no news mention found (negative example),No flooding reported for this ward in the 29 Aug 2017 event based on available sources
+2017-08-29,,18.95111,72.82737,C,3,0,no news mention found (negative example),No flooding reported for this ward in the 29 Aug 2017 event based on available sources
+2017-08-29,,18.96234,72.81005,D,4,0,no news mention found (negative example),No flooding reported for this ward in the 29 Aug 2017 event based on available sources
+2017-08-29,Byculla,18.975,72.833,E,5,2,Climate Signals,238mm in 24hr
+2017-08-29,Parel,18.993,72.8397,F/S,6,2,FloodList,230mm in 5hr window per BMC data; chronic flood zone
+2017-08-29,Worli,19.0176,72.8161,G/S,7,3,Climate Signals,308mm in 24hr; coastal western seaboard area heavily inundated
+2017-08-29,Lower Parel,18.996,72.83,G/S,7,2,Grokipedia,Knee-to-waist deep flooding on arterial routes reported
+2017-08-29,Dadar,19.0176,72.844,F/N,8,2,Grokipedia,Waterlogging and severe traffic gridlock reported
+2017-08-29,Sion,19.04,72.862,F/N,8,3,Grokipedia,Chronic flood zone; waterlogging on Sion-Panvel Highway and streets
+2017-08-29,Matunga,19.027,72.856,F/N,8,3,FloodList,"253mm in 5hr window per BMC data, highest of the reported spots"
+2017-08-29,,19.03404,72.84517,G/N,9,0,no news mention found (negative example),No flooding reported for this ward in the 29 Aug 2017 event based on available sources
+2017-08-29,,19.08709,72.92531,N,10,0,no news mention found (negative example),No flooding reported for this ward in the 29 Aug 2017 event based on available sources
+2017-08-29,Borivali,19.2307,72.8567,R/C,11,2,Climate Signals,262mm in 24hr
+2017-08-29,,19.13288,72.92944,S,12,0,no news mention found (negative example),No flooding reported for this ward in the 29 Aug 2017 event based on available sources
+2017-08-29,,19.17246,72.93,T,13,0,no news mention found (negative example),No flooding reported for this ward in the 29 Aug 2017 event based on available sources
+2017-08-29,Andheri,19.1197,72.8468,K/W,14,3,Climate Signals / Grokipedia,"320mm in 24hr to 6:30pm; subway flooded, WEH gridlocked"
+2017-08-29,Vile Parle,19.097,72.843,K/W,14,2,FloodList,212mm in 5hr window per BMC data
+2017-08-29,,19.25233,72.85981,R/N,15,0,no news mention found (negative example),No flooding reported for this ward in the 29 Aug 2017 event based on available sources
+2017-08-29,,19.03858,72.92471,M/E,16,0,no news mention found (negative example),No flooding reported for this ward in the 29 Aug 2017 event based on available sources
+2017-08-29,,19.0354,72.8936,M/W,17,0,no news mention found (negative example),No flooding reported for this ward in the 29 Aug 2017 event based on available sources
+2017-08-29,Santacruz,19.0825,72.842,H/E,18,3,Climate Signals/FloodList,322mm/212mm reported across sources; IMD Santacruz observatory station
+2017-08-29,Jogeshwari,19.1364,72.8494,K/E,19,2,Deccan Herald,Waterlogging reported on Western Express Highway corridor
+2017-08-29,,19.15845,72.85737,P/S,20,0,no news mention found (negative example),No flooding reported for this ward in the 29 Aug 2017 event based on available sources
+2017-08-29,,19.18437,72.82682,P/N,21,0,no news mention found (negative example),No flooding reported for this ward in the 29 Aug 2017 event based on available sources
+2017-08-29,,19.20448,72.86,R/S,22,0,no news mention found (negative example),No flooding reported for this ward in the 29 Aug 2017 event based on available sources
+2017-08-29,,19.06496,72.8314,H/W,23,0,no news mention found (negative example),No flooding reported for this ward in the 29 Aug 2017 event based on available sources
+2017-08-29,Kurla,19.0728,72.8826,L,24,3,FloodList/Grokipedia,"208mm in 5hr; street flooding, part of low-lying Mithi corridor"

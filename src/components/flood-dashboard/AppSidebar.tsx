@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Map, AlertTriangle, Building2, FileText,
-  ChevronDown, ChevronUp, Radio, ArrowLeft
+  ChevronDown, ChevronUp, Radio, ArrowLeft, Eye, EyeOff, Paintbrush, Boxes
 } from 'lucide-react';
 import { useFloodStore } from '@/store/flood-store';
 import { mumbaiWards } from '@/lib/mumbai-data';
@@ -17,14 +17,29 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/map', label: 'Live Map', icon: Map, live: true },
   { href: '/dashboard', label: 'Alerts', icon: AlertTriangle, badgeCount: true },
-  { href: '/dashboard', label: 'Wards', icon: Building2 },
+  { href: '#wards', label: 'Wards', icon: Building2, expandable: true },
   { href: '/dashboard', label: 'Reports', icon: FileText },
+];
+
+// City layer config for the ward controls
+const CITY_LAYERS = [
+  { key: 'mumbai' as const, label: 'Mumbai', color: '#3B82F6', wardCount: 24 },
+  { key: 'pune' as const, label: 'Pune', color: '#F59E0B', wardCount: 58 },
+  { key: 'navi_mumbai' as const, label: 'Navi Mumbai', color: '#10B981', wardCount: 111 },
 ];
 
 export default function AppSidebar() {
   const pathname = usePathname();
-  const { pinnedWards, wardSeverities, setSelectedWard, activeCity, switchCity } = useFloodStore();
+  const { 
+    pinnedWards, wardSeverities, setSelectedWard, 
+    activeCity, switchCity,
+    wardLayerVisibility, toggleWardLayerVisibility,
+    wardFillMode, toggleWardFillMode,
+    buildingMode, setBuildingMode,
+  } = useFloodStore();
   const [pinnedOpen, setPinnedOpen] = useState(true);
+  const [wardsOpen, setWardsOpen] = useState(true);
+  const isOnMap = pathname === '/map';
 
   const alertCount = Object.values(wardSeverities).filter((s) => s >= 2).length;
 
@@ -50,29 +65,22 @@ export default function AppSidebar() {
 
       <div className="mx-4 border-t border-white/10" />
 
-      {/* City Switcher */}
+      {/* City Switcher — now includes Navi Mumbai */}
       <div className="px-4 py-3">
         <div className="flex bg-white/[0.04] rounded-xl p-1 border border-white/10">
-          <button
-            onClick={() => switchCity('mumbai')}
-            className={`flex-1 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
-              activeCity === 'mumbai'
-                ? 'bg-white/15 text-white shadow-sm font-semibold'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            Mumbai
-          </button>
-          <button
-            onClick={() => switchCity('pune')}
-            className={`flex-1 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
-              activeCity === 'pune'
-                ? 'bg-white/15 text-white shadow-sm font-semibold'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            Pune
-          </button>
+          {(['mumbai', 'pune', 'navi_mumbai'] as const).map((city) => (
+            <button
+              key={city}
+              onClick={() => switchCity(city)}
+              className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-all ${
+                activeCity === city
+                  ? 'bg-white/15 text-white shadow-sm font-semibold'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              {city === 'navi_mumbai' ? 'Navi Mum.' : city.charAt(0).toUpperCase() + city.slice(1)}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -85,6 +93,121 @@ export default function AppSidebar() {
             (item.href === '/dashboard' && item.label === 'Dashboard' && (pathname === '/dashboard' || pathname === '/')) ||
             (item.href === '/map' && pathname === '/map');
           const Icon = item.icon;
+
+          // Handle expandable "Wards" item
+          if (item.expandable) {
+            return (
+              <div key={item.label}>
+                <button
+                  onClick={() => setWardsOpen(!wardsOpen)}
+                  className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-[13px] font-medium transition-all ${
+                    wardsOpen && isOnMap
+                      ? 'bg-white/10 text-white border border-white/15 shadow-sm font-semibold'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Icon size={16} className={wardsOpen && isOnMap ? 'text-[#5EA977]' : 'text-gray-400'} />
+                  <span className="flex-1 text-left font-satoshi">{item.label}</span>
+                  {wardsOpen ? (
+                    <ChevronUp size={12} className="text-gray-400" />
+                  ) : (
+                    <ChevronDown size={12} className="text-gray-400" />
+                  )}
+                </button>
+
+                {/* Ward Layer Controls (collapsible accordion) */}
+                <AnimatePresence>
+                  {wardsOpen && isOnMap && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="pl-4 pr-2 py-2 space-y-1.5">
+                        {/* Per-city visibility toggles */}
+                        {CITY_LAYERS.map((cityLayer) => (
+                          <button
+                            key={cityLayer.key}
+                            onClick={() => toggleWardLayerVisibility(cityLayer.key)}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all hover:bg-white/5 group"
+                          >
+                            <span
+                              className="w-2.5 h-2.5 rounded-full flex-shrink-0 border"
+                              style={{
+                                backgroundColor: wardLayerVisibility[cityLayer.key] ? cityLayer.color : 'transparent',
+                                borderColor: cityLayer.color,
+                                opacity: wardLayerVisibility[cityLayer.key] ? 1 : 0.4,
+                              }}
+                            />
+                            <span className={`flex-1 text-left text-[11px] font-medium ${
+                              wardLayerVisibility[cityLayer.key] ? 'text-white' : 'text-gray-500'
+                            }`}>
+                              {cityLayer.label}
+                            </span>
+                            <span className="text-[9px] font-mono text-gray-500">
+                              {cityLayer.wardCount}
+                            </span>
+                            {wardLayerVisibility[cityLayer.key] ? (
+                              <Eye size={12} className="text-gray-400 flex-shrink-0" />
+                            ) : (
+                              <EyeOff size={12} className="text-gray-600 flex-shrink-0" />
+                            )}
+                          </button>
+                        ))}
+
+                        {/* Building layer: photogrammetry vs. analytical extrusions */}
+                        <div className="border-t border-white/5 pt-1.5 mt-1">
+                          <button
+                            onClick={() => setBuildingMode(buildingMode === 'photoreal' ? 'analytical' : 'photoreal')}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all hover:bg-white/5"
+                          >
+                            <Boxes size={12} className={buildingMode === 'analytical' ? 'text-[#5EA977]' : 'text-gray-500'} />
+                            <span className={`flex-1 text-left text-[11px] font-medium ${
+                              buildingMode === 'analytical' ? 'text-white' : 'text-gray-400'
+                            }`}>
+                              Buildings
+                            </span>
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-mono ${
+                              buildingMode === 'analytical'
+                                ? 'bg-[#5EA977]/15 text-[#5EA977]'
+                                : 'bg-white/5 text-gray-500'
+                            }`}>
+                              {buildingMode === 'analytical' ? 'ANALYTIC' : 'PHOTOREAL'}
+                            </span>
+                          </button>
+                        </div>
+
+                        {/* Fill mode toggle */}
+                        <div className="border-t border-white/5 pt-1.5 mt-1">
+                          <button
+                            onClick={toggleWardFillMode}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all hover:bg-white/5"
+                          >
+                            <Paintbrush size={12} className={wardFillMode ? 'text-[#5EA977]' : 'text-gray-500'} />
+                            <span className={`flex-1 text-left text-[11px] font-medium ${
+                              wardFillMode ? 'text-white' : 'text-gray-400'
+                            }`}>
+                              Fill Mode
+                            </span>
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-mono ${
+                              wardFillMode 
+                                ? 'bg-[#5EA977]/15 text-[#5EA977]' 
+                                : 'bg-white/5 text-gray-500'
+                            }`}>
+                              {wardFillMode ? 'ON' : 'OFF'}
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          }
+
           return (
             <Link
               key={item.label}

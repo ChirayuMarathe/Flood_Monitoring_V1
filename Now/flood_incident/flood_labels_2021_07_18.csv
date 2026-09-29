@@ -1,0 +1,27 @@
+date,locality_mentioned,lat,lon,ward_name,ward_gid,severity,source,notes
+2021-07-18,,18.92315,72.825,A,1,0,no news mention found (negative example),No flooding reported for this ward in the 18 July 2021 event based on available sources
+2021-07-18,,18.95636,72.84014,B,2,0,no news mention found (negative example),No flooding reported for this ward in the 18 July 2021 event based on available sources
+2021-07-18,,18.95111,72.82737,C,3,0,no news mention found (negative example),No flooding reported for this ward in the 18 July 2021 event based on available sources
+2021-07-18,,18.96234,72.81005,D,4,0,no news mention found (negative example),No flooding reported for this ward in the 18 July 2021 event based on available sources
+2021-07-18,,18.97398,72.8365,E,5,0,no news mention found (negative example),No flooding reported for this ward in the 18 July 2021 event based on available sources
+2021-07-18,Parel,18.993,72.8397,F/S,6,2,India TV,"Rail tracks submerged, Central Railway main line suspended"
+2021-07-18,,18.99828,72.82175,G/S,7,0,no news mention found (negative example),No flooding reported for this ward in the 18 July 2021 event based on available sources
+2021-07-18,Dadar,19.0176,72.844,F/N,8,2,India TV/Deccan Herald,Rail tracks submerged; street waterlogging photographed
+2021-07-18,Matunga,19.027,72.856,F/N,8,2,India TV/Deccan Herald,"Rail tracks submerged, waterlogging on railway track photographed"
+2021-07-18,Sion,19.04,72.862,F/N,8,2,India TV,Rail tracks submerged; chronic flood zone
+2021-07-18,,19.03404,72.84517,G/N,9,0,no news mention found (negative example),No flooding reported for this ward in the 18 July 2021 event based on available sources
+2021-07-18,Vikhroli East,19.1075,72.928,N,10,3,Business Standard/Wikipedia,Landslide caved in Suryanagar slum hutments; 6-10 killed
+2021-07-18,,19.23125,72.84299,R/C,11,0,no news mention found (negative example),No flooding reported for this ward in the 18 July 2021 event based on available sources
+2021-07-18,Bhandup,19.145,72.937,S,12,2,India TV/Business Standard,"Rail tracks submerged; nearby water treatment plant flooded, causing citywide water shortage"
+2021-07-18,,19.17246,72.93,T,13,0,no news mention found (negative example),No flooding reported for this ward in the 18 July 2021 event based on available sources
+2021-07-18,Andheri West,19.1364,72.8296,K/W,14,2,Gulf News,Resident electrocuted in shop due to flood-related short circuit
+2021-07-18,,19.25233,72.85981,R/N,15,0,no news mention found (negative example),No flooding reported for this ward in the 18 July 2021 event based on available sources
+2021-07-18,,19.03858,72.92471,M/E,16,0,no news mention found (negative example),No flooding reported for this ward in the 18 July 2021 event based on available sources
+2021-07-18,Chembur (Vashi Naka/Bharat Nagar),19.0522,72.9005,M/W,17,3,Business Standard/FloodList/Wikipedia,"Retaining wall collapse after landslide; 17-19 killed, worst single incident of the event"
+2021-07-18,,19.07041,72.85566,H/E,18,0,no news mention found (negative example),No flooding reported for this ward in the 18 July 2021 event based on available sources
+2021-07-18,,19.11383,72.86549,K/E,19,0,no news mention found (negative example),No flooding reported for this ward in the 18 July 2021 event based on available sources
+2021-07-18,,19.15845,72.85737,P/S,20,0,no news mention found (negative example),No flooding reported for this ward in the 18 July 2021 event based on available sources
+2021-07-18,,19.18437,72.82682,P/N,21,0,no news mention found (negative example),No flooding reported for this ward in the 18 July 2021 event based on available sources
+2021-07-18,,19.20448,72.86,R/S,22,0,no news mention found (negative example),No flooding reported for this ward in the 18 July 2021 event based on available sources
+2021-07-18,,19.06496,72.8314,H/W,23,0,no news mention found (negative example),No flooding reported for this ward in the 18 July 2021 event based on available sources
+2021-07-18,Kurla,19.0728,72.8826,L,24,2,India TV,"Rail tracks submerged, Harbour line suspended"

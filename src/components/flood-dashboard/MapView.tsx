@@ -9,10 +9,10 @@ import { mumbaiWards, getWardGeoJSON } from '@/lib/mumbai-data';
 
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-const MUMBAI_CENTER: [number, number] = [72.8777, 19.076];
-const MUMBAI_BOUNDS: [[number, number], [number, number]] = [
-  [72.75, 18.85],
-  [73.0, 19.30],
+const REGION_CENTER: [number, number] = [73.4, 18.8];
+const REGION_BOUNDS: [[number, number], [number, number]] = [
+  [72.6, 18.3],
+  [74.2, 19.4],
 ];
 
 function getSevAlpha(severity: number): number {
@@ -210,25 +210,29 @@ export default function MapView() {
         version: 8,
         name: 'Flood Monitor',
         sources: {
-          'carto-dark': {
+          'satellite': {
             type: 'raster',
             tiles: [
-              'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
-              'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
-              'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+              'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
             ],
             tileSize: 256,
-            attribution: '&copy; OpenStreetMap contributors, &copy; CARTO',
+            attribution: '&copy; Esri',
+          },
+          'terrainSource': {
+            type: 'raster-dem',
+            url: 'https://demotiles.maplibre.org/terrain-tiles/tiles.json',
+            tileSize: 256,
           },
         },
-        layers: [{ id: 'carto-dark-layer', type: 'raster', source: 'carto-dark', minzoom: 0, maxzoom: 22 }],
+        layers: [{ id: 'satellite-layer', type: 'raster', source: 'satellite', minzoom: 0, maxzoom: 22 }],
+        terrain: { source: 'terrainSource', exaggeration: 1.5 },
         glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
       },
-      center: MUMBAI_CENTER,
-      zoom: 11.5,
-      pitch: 50,
-      bearing: -12,
-      maxBounds: MUMBAI_BOUNDS,
+      center: REGION_CENTER,
+      zoom: 9.5,
+      pitch: 60,
+      bearing: 15,
+      maxBounds: REGION_BOUNDS,
       dragRotate: true,
       touchZoomRotate: true,
     });
@@ -249,11 +253,11 @@ export default function MapView() {
       deckRef.current = new Deck({
         canvas: mapCanvas,
         initialViewState: {
-          longitude: MUMBAI_CENTER[0],
-          latitude: MUMBAI_CENTER[1],
-          zoom: 11.5,
-          pitch: 50,
-          bearing: -12,
+          longitude: REGION_CENTER[0],
+          latitude: REGION_CENTER[1],
+          zoom: 9.5,
+          pitch: 60,
+          bearing: 15,
         },
         controller: false,
         layers,

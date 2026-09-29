@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 64" fill="white">
+  <!-- Pin body -->
+  <path d="M24 0C10.745 0 0 10.745 0 24c0 18 24 40 24 40s24-22 24-40C48 10.745 37.255 0 24 0z" opacity="0.9"/>
+  <!-- Wave motif — tidal backflow -->
+  <g transform="translate(24,22)" fill="rgba(0,0,0,0.55)">
+    <path d="M-12-2c3-3 6 0 9-3s6 0 9-3" fill="none" stroke="rgba(0,0,0,0.6)" stroke-width="2" stroke-linecap="round"/>
+    <path d="M-12 2c3-3 6 0 9-3s6 0 9-3" fill="none" stroke="rgba(0,0,0,0.5)" stroke-width="2" stroke-linecap="round"/>
+    <path d="M-12 6c3-3 6 0 9-3s6 0 9-3" fill="none" stroke="rgba(0,0,0,0.4)" stroke-width="2" stroke-linecap="round"/>
+  </g>
+</svg>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 64" fill="white">
+  <!-- Pin body -->
+  <path d="M24 0C10.745 0 0 10.745 0 24c0 18 24 40 24 40s24-22 24-40C48 10.745 37.255 0 24 0z" opacity="0.9"/>
+  <!-- River/flow-line motif -->
+  <g transform="translate(24,20)" fill="none" stroke="rgba(0,0,0,0.6)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M-6-6 Q-10-3 -6 0 T-6 6" />
+    <path d="M0-6 Q-4-3 0 0 T0 6" />
+    <path d="M6-6 Q2-3 6 0 T6 6" />
+    <!-- Overflowing horizontal lines -->
+    <path d="M-10 1 H10" stroke-width="1.5" stroke="rgba(0,0,0,0.4)" />
+    <path d="M-12 5 H12" stroke-width="1.5" stroke="rgba(0,0,0,0.4)" />
+  </g>
+</svg>

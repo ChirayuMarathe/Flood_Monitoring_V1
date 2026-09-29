@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "nextjs_tailwind_shadcn_ts",
+      "name": "flood-prediction-v1",
       "dependencies": {
         "@deck.gl/core": "^9.3.7",
         "@deck.gl/extensions": "^9.3.7",

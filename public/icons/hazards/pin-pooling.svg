@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 64" fill="white">
+  <!-- Pin body -->
+  <path d="M24 0C10.745 0 0 10.745 0 24c0 18 24 40 24 40s24-22 24-40C48 10.745 37.255 0 24 0z" opacity="0.9"/>
+  <!-- Concentric basin rings — topographic pooling -->
+  <g transform="translate(24,22)" fill="none" stroke="rgba(0,0,0,0.5)" stroke-width="1.5">
+    <ellipse cx="0" cy="2" rx="12" ry="5"/>
+    <ellipse cx="0" cy="1" rx="8" ry="3.5"/>
+    <ellipse cx="0" cy="0" rx="4" ry="2"/>
+  </g>
+  <!-- Down arrow indicating low-lying -->
+  <path d="M24 14l-4-5h8z" fill="rgba(0,0,0,0.6)"/>
+</svg>

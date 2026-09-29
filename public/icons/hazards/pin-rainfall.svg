@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 64" fill="white">
+  <!-- Pin body -->
+  <path d="M24 0C10.745 0 0 10.745 0 24c0 18 24 40 24 40s24-22 24-40C48 10.745 37.255 0 24 0z" opacity="0.9"/>
+  <!-- Rain droplet motif -->
+  <g transform="translate(24,22)" fill="currentColor">
+    <path d="M0-10C0-10-7 0-7 5a7 7 0 0014 0C7 0 0-10 0-10z" fill="rgba(0,0,0,0.6)"/>
+    <!-- Small droplets -->
+    <circle cx="-8" cy="-4" r="1.5" fill="rgba(0,0,0,0.4)"/>
+    <circle cx="8" cy="-6" r="1.5" fill="rgba(0,0,0,0.4)"/>
+    <circle cx="-5" cy="-8" r="1" fill="rgba(0,0,0,0.3)"/>
+  </g>
+</svg>

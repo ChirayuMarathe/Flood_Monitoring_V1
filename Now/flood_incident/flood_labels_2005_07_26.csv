@@ -1,0 +1,32 @@
+date,locality_mentioned,lat,lon,ward_name,ward_gid,severity,source,notes
+2005-07-26,,18.92314,72.825,A,1,0,no news mention found (negative example),No flooding reported for this ward in the 26 July 2005 event based on available sources
+2005-07-26,,18.95636,72.84014,B,2,0,no news mention found (negative example),No flooding reported for this ward in the 26 July 2005 event based on available sources
+2005-07-26,,18.95111,72.82737,C,3,0,no news mention found (negative example),No flooding reported for this ward in the 26 July 2005 event based on available sources
+2005-07-26,Tardeo,18.969,72.814,D,4,2,JETIR2208111,Chronic flooding area; flooded 26 July
+2005-07-26,Lalbaug,18.9825,72.833,E,5,2,JETIR2208111,Chronic flooding area even in normal monsoons; flooded 26 July
+2005-07-26,Parel,18.993,72.8397,F/S,6,2,JETIR2208111,Chronic flooding area; flooded 26 July
+2005-07-26,,18.99828,72.82175,G/S,7,0,no news mention found (negative example),No flooding reported for this ward in the 26 July 2005 event based on available sources
+2005-07-26,Chunabhatti,19.027,72.872,F/N,8,2,mukundsathe.com (BMC records),Low-lying pocket; waterlogging halted traffic
+2005-07-26,Dadar TT,19.0176,72.844,F/N,8,2,JETIR2208111,Chronic flooding area (TT Circle); flooded 26 July
+2005-07-26,Sion,19.04,72.862,F/N,8,3,mukundsathe.com/JETIR,Low-lying pocket; severe waterlogging and traffic standstill
+2005-07-26,King Circle,19.027,72.856,F/N,8,2,JETIR2208111,Chronic flooding area (Matunga); flooded 26 July
+2005-07-26,Dharavi,19.041,72.857,G/N,9,3,Wikipedia/multiple news,Low-lying pocket heavily inundated; slum area along Mithi river banks
+2005-07-26,Hindmata,19.0184,72.837,G/N,9,3,JETIR2208111,Notorious chronic waterlogging spot in Dadar; severe flooding
+2005-07-26,Ghatkopar,19.0857,72.9081,N,10,2,mukundsathe.com (BMC records),Low-lying pocket; waterlogging halted traffic
+2005-07-26,,19.23125,72.84299,R/C,11,0,no news mention found (negative example),No flooding reported for this ward in the 26 July 2005 event based on available sources
+2005-07-26,Powai,19.1197,72.905,S,12,2,mukundsathe.com,"Powai Lake overflowed at 4pm, discharging ~5.95 million cubic metres into Mithi River"
+2005-07-26,,19.17246,72.93,T,13,0,no news mention found (negative example),No flooding reported for this ward in the 26 July 2005 event based on available sources
+2005-07-26,Andheri Subway,19.1197,72.8468,K/W,14,3,general knowledge - chronic BMC flood spot list,"Chronic subway flood spot, submerged"
+2005-07-26,,19.25233,72.85981,R/N,15,0,no news mention found (negative example),No flooding reported for this ward in the 26 July 2005 event based on available sources
+2005-07-26,,19.03858,72.92471,M/E,16,0,no news mention found (negative example),No flooding reported for this ward in the 26 July 2005 event based on available sources
+2005-07-26,Chembur,19.0522,72.9005,M/W,17,2,mukundsathe.com (BMC records),Low-lying pocket; waterlogging halted traffic
+2005-07-26,Kalina,19.0728,72.848,H/E,18,3,Mumbai Marooned (Concerned Citizens' Commission enquiry),Corporator resigned over lack of flood response; 25-30 bodies reported on one road nearby
+2005-07-26,Milan Subway,19.0825,72.842,H/E,18,3,mukundsathe.com (BMC records),"Subway near Santacruz; chronic flood spot, submerged"
+2005-07-26,Bandra-Kurla Complex,19.0662,72.8676,H/E,18,3,Wikipedia/multiple news,Built on reclaimed mangrove/swamp land along Mithi river; heavily submerged
+2005-07-26,Santacruz,19.0825,72.842,H/E,18,3,Wikipedia,IMD Santacruz observatory recorded the record 944mm/24hr rainfall here
+2005-07-26,,19.11382,72.86549,K/E,19,0,no news mention found (negative example),No flooding reported for this ward in the 26 July 2005 event based on available sources
+2005-07-26,,19.15845,72.85737,P/S,20,0,no news mention found (negative example),No flooding reported for this ward in the 26 July 2005 event based on available sources
+2005-07-26,,19.18437,72.82682,P/N,21,0,no news mention found (negative example),No flooding reported for this ward in the 26 July 2005 event based on available sources
+2005-07-26,,19.20448,72.86,R/S,22,0,no news mention found (negative example),No flooding reported for this ward in the 26 July 2005 event based on available sources
+2005-07-26,,19.06496,72.8314,H/W,23,0,no news mention found (negative example),No flooding reported for this ward in the 26 July 2005 event based on available sources
+2005-07-26,Kurla,19.0728,72.8826,L,24,3,Question of Cities (survivor account),"Among worst affected; residents recall corpses floating, waist-deep water"

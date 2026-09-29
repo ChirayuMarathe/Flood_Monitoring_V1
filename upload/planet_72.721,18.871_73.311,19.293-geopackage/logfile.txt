@@ -1,0 +1,17 @@
+File:
+  Name: /data/bbbike/extract/running/4cc5cf3d51495f6a1c116bcbf58348bf/planet_72.721,18.871_73.311,19.293.osm.pbf
+  Format: PBF
+  Compression: none
+  Size: 26666566
+Header:
+  Bounding boxes:
+    (72.721,18.871,73.311,19.293)
+  With history: no
+  Options:
+    generator=https://download.BBBike.org
+    osmosis_replication_timestamp=2026-08-10T23:00:00Z
+    pbf_dense_nodes=true
+    pbf_optional_feature_0=Sort.Type_then_ID
+    sorting=Type_then_ID
+    timestamp=2026-08-10T23:00:00Z
+osmium2geopackage version GDAL 3.6.2, released 2023/01/02
