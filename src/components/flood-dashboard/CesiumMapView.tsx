@@ -27,7 +27,7 @@ import { flyToCity, flyToWard, initCameraControls } from '@/lib/gis/cameraContro
 
 const CESIUM_TOKEN = process.env.NEXT_PUBLIC_CESIUM_TOKEN || '';
 
-import { loadCityTileset, loadPhotorealTileset } from '@/lib/gis/BuildingTileset';
+import { loadCityTileset, loadPhotorealTileset, loadOsmBuildingsTileset } from '@/lib/gis/BuildingTileset';
 import { WardRiskPopup } from './WardRiskPopup';
 import WardTagLayer from './WardTagLayer';
 import { wardProfileKey } from '@/lib/risk/WardRiskProfile';
@@ -41,6 +41,7 @@ export default function CesiumMapView() {
   const handlerRef = useRef<ScreenSpaceEventHandler | null>(null);
   const tilesetsRef = useRef<Map<string, Cesium.Cesium3DTileset>>(new Map());
   const photorealRef = useRef<Cesium.Cesium3DTileset | null>(null);
+  const osmBuildingsRef = useRef<Cesium.Cesium3DTileset | null>(null);
   const initRef = useRef(false);
 
   const [hoverInfo, setHoverInfo] = useState<{ x: number, y: number, name: string, city: string } | null>(null);
@@ -72,17 +73,22 @@ export default function CesiumMapView() {
     const viewer = viewerRef.current;
     if (!viewer || !mapReady) return;
 
+    console.log(`[Buildings] Mode='${buildingMode}', city='${activeCity}', mapReady=${mapReady}`);
+
     const showPhotoreal = async () => {
       for (const ts of tilesetsRef.current.values()) ts.show = false;
+      if (osmBuildingsRef.current) osmBuildingsRef.current.show = false;
 
       if (!photorealRef.current) {
         setLoadingProgress(5);
+        console.log('[Buildings] Loading Google Photorealistic 3D Tiles (Ion asset 2275207)...');
         try {
           const ts = await loadPhotorealTileset(viewer);
-          if (cancelled || !ts) return;
+          if (cancelled || !ts) { console.warn('[Buildings] Photoreal load returned null or cancelled'); return; }
           photorealRef.current = ts;
+          console.log('[Buildings] Photorealistic tiles loaded successfully');
         } catch (err) {
-          console.error('[CesiumMapView] Photorealistic tiles unavailable:', err);
+          console.error('[Buildings] Photorealistic tiles FAILED — falling back to analytical:', err);
           if (!cancelled) useFloodStore.getState().setBuildingMode('analytical');
           return;
         } finally {
@@ -91,8 +97,6 @@ export default function CesiumMapView() {
       }
       if (cancelled) return;
       photorealRef.current!.show = true;
-      // The photogrammetry mesh carries its own ground; the imagery globe
-      // underneath would only z-fight with it.
       viewer.scene.globe.show = false;
     };
 
@@ -100,17 +104,20 @@ export default function CesiumMapView() {
       if (photorealRef.current) photorealRef.current.show = false;
       viewer.scene.globe.show = true;
 
-      // Cached tilesets stay loaded, so switching cities back is instant.
+      // 1. If local offline tiles exist and are loaded for this city, show them
       for (const [key, ts] of tilesetsRef.current) ts.show = key === activeCity;
-      if (tilesetsRef.current.has(activeCity)) return;
+      if (tilesetsRef.current.has(activeCity)) {
+        console.log(`[Buildings] Re-showing cached local tiles for '${activeCity}'`);
+        if (osmBuildingsRef.current) osmBuildingsRef.current.show = false;
+        return;
+      }
 
       setLoadingProgress(0);
       try {
-        const tileset = await loadCityTileset(viewer, activeCity, {
+        console.log(`[Buildings] Probing local tiles at /tiles/${activeCity}/tileset.json ...`);
+        const localTileset = await loadCityTileset(viewer, activeCity, {
           onProgress: (pending, processing) => {
             if (cancelled) return;
-            // There's no known total to divide by, so treat the outstanding
-            // request count as distance-to-done and dismiss once it settles.
             const outstanding = pending + processing;
             if (outstanding === 0) {
               setLoadingProgress(100);
@@ -120,13 +127,44 @@ export default function CesiumMapView() {
             }
           },
         });
-        if (cancelled || !tileset) return;
-        tilesetsRef.current.set(activeCity, tileset);
-        const store = useFloodStore.getState();
-        tileset.show = store.activeCity === activeCity && store.buildingMode === 'analytical';
+
+        if (cancelled) return;
+
+        if (localTileset) {
+          console.log(`[Buildings] Local 3D Tiles for '${activeCity}' loaded — ${localTileset.root?.children?.length ?? '?'} root children`);
+          tilesetsRef.current.set(activeCity, localTileset);
+          const store = useFloodStore.getState();
+          localTileset.show = store.activeCity === activeCity && store.buildingMode === 'analytical';
+          if (osmBuildingsRef.current) osmBuildingsRef.current.show = false;
+          return;
+        }
+
+        // 2. Cloud streaming fallback: Cesium OSM 3D Buildings (0 MB local disk storage)
+        console.log('[Buildings] No local tiles — falling back to Cesium OSM Buildings...');
+        if (!osmBuildingsRef.current) {
+          const osm = await loadOsmBuildingsTileset(viewer, {
+            onProgress: (pending, processing) => {
+              if (cancelled) return;
+              const outstanding = pending + processing;
+              if (outstanding === 0) {
+                setLoadingProgress(100);
+                setTimeout(() => { if (!cancelled) setLoadingProgress(null); }, 600);
+              } else {
+                setLoadingProgress(Math.max(5, 100 - outstanding * 4));
+              }
+            },
+          });
+          if (cancelled || !osm) return;
+          osmBuildingsRef.current = osm;
+        }
+
+        if (osmBuildingsRef.current) {
+          const store = useFloodStore.getState();
+          osmBuildingsRef.current.show = store.buildingMode === 'analytical';
+        }
       } catch (err) {
         if (!cancelled) {
-          console.error(`[CesiumMapView] Failed to load building tileset for ${activeCity}:`, err);
+          console.error(`[Buildings] Failed to load building tileset for ${activeCity}:`, err);
           setLoadingProgress(null);
         }
       }
@@ -385,6 +423,10 @@ export default function CesiumMapView() {
       if (photorealRef.current) {
         viewer.scene.primitives.remove(photorealRef.current);
         photorealRef.current = null;
+      }
+      if (osmBuildingsRef.current) {
+        viewer.scene.primitives.remove(osmBuildingsRef.current);
+        osmBuildingsRef.current = null;
       }
       viewer.destroy();
       initRef.current = false;

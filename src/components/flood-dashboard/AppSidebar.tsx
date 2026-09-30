@@ -16,9 +16,9 @@ import { Logo } from './Logo';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/map', label: 'Live Map', icon: Map, live: true },
-  { href: '/dashboard', label: 'Alerts', icon: AlertTriangle, badgeCount: true },
+  { href: '/alerts', label: 'Alerts', icon: AlertTriangle, badgeCount: true },
   { href: '#wards', label: 'Wards', icon: Building2, expandable: true },
-  { href: '/dashboard', label: 'Reports', icon: FileText },
+  { href: '/reports', label: 'Reports', icon: FileText },
 ];
 
 // City layer config for the ward controls
@@ -91,7 +91,7 @@ export default function AppSidebar() {
         {navItems.map((item) => {
           const isActive =
             (item.href === '/dashboard' && item.label === 'Dashboard' && (pathname === '/dashboard' || pathname === '/')) ||
-            (item.href === '/map' && pathname === '/map');
+            (item.href !== '/dashboard' && item.href !== '#wards' && pathname === item.href);
           const Icon = item.icon;
 
           // Handle expandable "Wards" item

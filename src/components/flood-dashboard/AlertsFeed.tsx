@@ -16,7 +16,12 @@ export default function AlertsFeed() {
           <Bell size={13} className="text-[#8B919E]" />
           <h3 className="text-[13px] font-semibold text-[#E1E4EA]">Recent Activity</h3>
         </div>
-        <span className="text-[10px] text-[#525866] font-mono">{alertHistory.length} events</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-[#525866] font-mono">{alertHistory.length} events</span>
+          <a href="/alerts" className="text-[10px] text-[#5B8DEF] hover:underline font-mono ml-1">
+            View All →
+          </a>
+        </div>
       </div>
       <div className="overflow-y-auto max-h-[300px] custom-scrollbar">
         {alertHistory.length === 0 ? (

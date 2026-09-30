@@ -1,12 +1,12 @@
 import * as Cesium from 'cesium';
 
+const CESIUM_TOKEN = process.env.NEXT_PUBLIC_CESIUM_TOKEN || '';
+
 /**
- * Streaming building layer, backed by the 3D Tiles sets under public/tiles/<city>/
- * (generated offline by scripts/extract_buildings.py + scripts/build_3dtiles.py).
- *
- * Replaces the old GeoJSON path, which parsed a few hundred MB of text on the
- * main thread and then held every footprint in memory forever. Here Cesium
- * streams only the tiles in view and evicts the rest.
+ * Streaming 3D building layers:
+ * 1. Cloud-streamed Cesium OSM Buildings (Ion Asset 96188) — 0 MB local disk footprint.
+ * 2. Cloud-streamed Google Photorealistic 3D Tiles (Ion Asset 2275207).
+ * 3. Optional local offline 3D Tiles under public/tiles/<city>/tileset.json (if present).
  */
 
 const TILESET_URLS: Record<string, string> = {
@@ -18,17 +18,10 @@ const TILESET_URLS: Record<string, string> = {
 /** Google Photorealistic 3D Tiles, served through the project's Cesium ion token. */
 const GOOGLE_PHOTOREAL_ION_ASSET = 2275207;
 
-/**
- * The photogrammetry base layer: real Mumbai/Pune, not extruded footprints.
- * It's a single baked mesh, so nothing in it can be recolored per building —
- * that's what the analytical extrusion layer above is for.
- */
 export async function loadPhotorealTileset(
   viewer: Cesium.Viewer
 ): Promise<Cesium.Cesium3DTileset | null> {
   const tileset = await Cesium.Cesium3DTileset.fromIonAssetId(GOOGLE_PHOTOREAL_ION_ASSET, {
-    // Google's terms require their attribution to stay visible; Cesium handles
-    // that automatically as long as the credit container isn't suppressed.
     maximumScreenSpaceError: 16,
     cacheBytes: 512 * 1024 * 1024,
   });
@@ -39,10 +32,10 @@ export async function loadPhotorealTileset(
 }
 
 /**
- * Shades the flat extrusions into something that reads as a building: floor
+ * Shades extrusions into something that reads as a building: floor
  * bands at storey height, plus a specular lift on towers so glass catches light.
  */
-function buildingShader() {
+export function buildingShader() {
   return new Cesium.CustomShader({
     lightingModel: Cesium.LightingModel.PBR,
     fragmentShaderText: `
@@ -63,31 +56,25 @@ export interface BuildingTilesetOptions {
   onProgress?: (pending: number, processing: number) => void;
 }
 
-export async function loadCityTileset(
+/**
+ * Loads cloud-streamed Cesium OSM 3D Buildings (Asset ID 96188).
+ * Provides worldwide 3D buildings including Mumbai, Pune, and Navi Mumbai.
+ * Requires 0 MB of local disk space.
+ */
+export async function loadOsmBuildingsTileset(
   viewer: Cesium.Viewer,
-  city: string,
   options: BuildingTilesetOptions = {}
 ): Promise<Cesium.Cesium3DTileset | null> {
-  const url = TILESET_URLS[city];
-  if (!url) return null;
-
-  const tileset = await Cesium.Cesium3DTileset.fromUrl(url, {
-    maximumScreenSpaceError: options.maximumScreenSpaceError ?? 16,
-    cacheBytes: 384 * 1024 * 1024,
-    maximumCacheOverflowBytes: 128 * 1024 * 1024,
-    // The tileset uses ADD refinement (each level adds shorter buildings on top
-    // of the skyline already drawn), so the REPLACE-only traversal options —
-    // skipLevelOfDetail, dynamicScreenSpaceError — are deliberately left off.
-  });
+  const tileset = await Cesium.createOsmBuildingsAsync();
 
   if (viewer.isDestroyed()) return null;
+
+  tileset.maximumScreenSpaceError = options.maximumScreenSpaceError ?? 16;
 
   tileset.customShader = buildingShader();
   tileset.shadows = Cesium.ShadowMode.ENABLED;
 
   if (options.onProgress) {
-    // Progress is only interesting for the first fill — after that tiles stream
-    // in and out constantly and a bar flashing on every camera move is noise.
     const onProgress = options.onProgress;
     const remove = tileset.loadProgress.addEventListener(onProgress);
     tileset.initialTilesLoaded.addEventListener(() => {
@@ -98,4 +85,53 @@ export async function loadCityTileset(
 
   viewer.scene.primitives.add(tileset);
   return tileset;
+}
+
+/**
+ * Loads custom local city tileset if present under public/tiles/<city>/tileset.json.
+ * Returns null if not found locally so caller can fall back to cloud OSM buildings.
+ */
+export async function loadCityTileset(
+  viewer: Cesium.Viewer,
+  city: string,
+  options: BuildingTilesetOptions = {}
+): Promise<Cesium.Cesium3DTileset | null> {
+  const url = TILESET_URLS[city];
+  if (!url) return null;
+
+  try {
+    // Quick probe to ensure the file exists and avoid 404 console noise
+    const probe = await fetch(url, { method: 'HEAD' });
+    if (!probe.ok) {
+      console.log(`[BuildingTileset] HEAD probe for ${url} returned ${probe.status} — skipping local tiles`);
+      return null;
+    }
+
+    console.log(`[BuildingTileset] Local tileset found at ${url}, loading...`);
+
+    const tileset = await Cesium.Cesium3DTileset.fromUrl(url, {
+      maximumScreenSpaceError: options.maximumScreenSpaceError ?? 16,
+      cacheBytes: 384 * 1024 * 1024,
+      maximumCacheOverflowBytes: 128 * 1024 * 1024,
+    });
+
+    if (viewer.isDestroyed()) return null;
+
+    tileset.customShader = buildingShader();
+    tileset.shadows = Cesium.ShadowMode.ENABLED;
+
+    if (options.onProgress) {
+      const onProgress = options.onProgress;
+      const remove = tileset.loadProgress.addEventListener(onProgress);
+      tileset.initialTilesLoaded.addEventListener(() => {
+        onProgress(0, 0);
+        remove();
+      });
+    }
+
+    viewer.scene.primitives.add(tileset);
+    return tileset;
+  } catch {
+    return null;
+  }
 }

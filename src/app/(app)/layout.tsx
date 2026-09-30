@@ -8,10 +8,13 @@ import { useEffect } from 'react';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const updateSeverities = useFloodStore((s) => s.updateSeverities);
+  const initRiskData = useFloodStore((s) => s.initRiskData);
+  const riskDataLoaded = useFloodStore((s) => s.riskDataLoaded);
 
   useEffect(() => {
     updateSeverities();
-  }, [updateSeverities]);
+    if (!riskDataLoaded) initRiskData();
+  }, [updateSeverities, initRiskData, riskDataLoaded]);
 
   return (
     <div className="w-screen h-screen bg-black text-white font-satoshi flex overflow-hidden relative">

@@ -12,7 +12,7 @@ export class ArcGISFeatureLoader {
    */
   static async loadAsGeoJSON(url: string, where: string = '1=1', apiKey?: string): Promise<any> {
     
-    let authentication = undefined;
+    let authentication: ApiKeyManager | undefined = undefined;
     if (apiKey) {
       authentication = ApiKeyManager.fromKey(apiKey);
     }

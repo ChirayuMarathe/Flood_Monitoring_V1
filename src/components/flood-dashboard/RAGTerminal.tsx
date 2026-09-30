@@ -9,7 +9,7 @@ export default function RAGTerminal() {
   const {
     ragPanelOpen, toggleRAGPanel, selectedWardId, selectedWard, timeIndex,
     ragMessages, addRAGMessage, isRAGLoading, setRAGLoading, clearRAGMessages,
-    wardSeverities, criticalAlertVisible
+    wardSeverities, criticalAlertVisible, getWardRiskProfile
   } = useFloodStore();
 
   const [input, setInput] = useState('');
@@ -27,13 +27,19 @@ export default function RAGTerminal() {
       content: `Alert triggered for ${ward?.name || 'Unknown Ward'} — Severity Level ${severity}`,
     });
     try {
+      const profile = getWardRiskProfile(selectedWardId);
+      if (!profile) {
+        addRAGMessage({ role: 'assistant', content: `No risk profile data available for this ward yet. Risk data may still be loading.` });
+        setRAGLoading(false);
+        return;
+      }
       const res = await fetch(`/api/rag-alert`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wardId: selectedWardId, timeIndex }),
+        body: JSON.stringify(profile),
       });
       const data = await res.json();
-      addRAGMessage({ role: 'assistant', content: data.response });
+      addRAGMessage({ role: 'assistant', content: data.error || data.response });
     } catch {
       addRAGMessage({
         role: 'assistant',
@@ -49,13 +55,14 @@ export default function RAGTerminal() {
     setInput('');
     setRAGLoading(true);
     try {
+      const profile = getWardRiskProfile(selectedWardId);
       const res = await fetch(`/api/rag-alert`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wardId: selectedWardId, timeIndex, query: input }),
+        body: JSON.stringify({ profile, query: input }),
       });
       const data = await res.json();
-      addRAGMessage({ role: 'assistant', content: data.response });
+      addRAGMessage({ role: 'assistant', content: data.error || data.response });
     } catch {
       addRAGMessage({ role: 'assistant', content: 'Error connecting to inference service.' });
     }

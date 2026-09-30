@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "copy-cesium": "cpx \"node_modules/cesium/Build/Cesium/Workers/**\" public/cesium/Workers -C && cpx \"node_modules/cesium/Build/Cesium/ThirdParty/**\" public/cesium/ThirdParty -C && cpx \"node_modules/cesium/Build/Cesium/Assets/**\" public/cesium/Assets -C && cpx \"node_modules/cesium/Build/Cesium/Widgets/**\" public/cesium/Widgets -C",
-    "dev": "npm run copy-cesium && next dev -p 3000 2>&1 | tee dev.log",
+    "dev": "npm run copy-cesium && next dev -p 3000",
     "build": "npm run copy-cesium && next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
@@ -90,6 +90,7 @@
     "react-resizable-panels": "^3.0.3",
     "react-syntax-highlighter": "^15.6.1",
     "recharts": "^2.15.4",
+    "remark-gfm": "^4.0.1",
     "sharp": "^0.34.3",
     "sonner": "^2.0.6",
     "tailwind-merge": "^3.3.1",
