@@ -306,29 +306,35 @@ export default function CesiumMapView() {
       creditContainer.style.fontSize = '9px';
     }
 
-    // Initialize the multi-city WardLayer and load all cities
+    // Initialize the multi-city WardLayer and load initial city first for instant display
     const wardLayer = new WardLayer(viewer);
     wardLayerRef.current = wardLayer;
 
-    wardLayer.loadAllCities().then(() => {
-      console.log('[CesiumMapView] All ward layers loaded');
+    const initialCity = useFloodStore.getState().activeCity || 'mumbai';
+
+    // Fast path: load initial city first (<150ms) so map is interactive immediately
+    wardLayer.loadCity(initialCity as any).then(() => {
+      console.log(`[CesiumMapView] Initial city '${initialCity}' loaded — map ready`);
       setMapReady(true);
       
-      // Apply initial visibility from store
       const { wardLayerVisibility } = useFloodStore.getState();
-      wardLayer.setCityVisible('mumbai', wardLayerVisibility.mumbai);
-      wardLayer.setCityVisible('pune', wardLayerVisibility.pune);
-      wardLayer.setCityVisible('navi_mumbai', wardLayerVisibility.navi_mumbai);
-
-      // Anchor points for the floating ward tags
+      wardLayer.setCityVisible(initialCity as any, wardLayerVisibility[initialCity as keyof typeof wardLayerVisibility] ?? true);
       setWardAnchors(wardLayer.getWardAnchors());
-
-      // Initialize risk profile data (Phase 1) — loads CSVs and computes initial profiles
       useFloodStore.getState().initRiskData();
+
+      // Background load other cities without blocking UI
+      const otherCities = (['mumbai', 'pune', 'navi_mumbai'] as const).filter(c => c !== initialCity);
+      Promise.all(otherCities.map(c => wardLayer.loadCity(c))).then(() => {
+        console.log('[CesiumMapView] Remaining cities background loaded');
+        const currentVis = useFloodStore.getState().wardLayerVisibility;
+        for (const c of otherCities) {
+          wardLayer.setCityVisible(c, currentVis[c]);
+        }
+        setWardAnchors(wardLayer.getWardAnchors());
+      }).catch(err => console.warn('[CesiumMapView] Background cities load error:', err));
     }).catch(err => console.error('[CesiumMapView] Ward layer load failed:', err));
     
     // Fly to initial city
-    const initialCity = useFloodStore.getState().activeCity;
     const center = CITY_CENTERS[initialCity as keyof typeof CITY_CENTERS] || CITY_CENTERS.mumbai;
     viewer.camera.flyTo({
       destination: Cartesian3.fromDegrees(center.lng, center.lat, center.altitude),

@@ -98,7 +98,9 @@ export class WardLayer {
   /**
    * Load a single city's ward boundaries.
    */
-  private async loadCity(city: CityKey): Promise<void> {
+  public async loadCity(city: CityKey): Promise<void> {
+    if (this.cityLayers.has(city)) return;
+
     // When remote storage is configured, fetch pre-normalized GeoJSON directly
     // from Supabase CDN. Otherwise use the local API route which normalizes on the fly.
     const apiUrl = isRemoteEnabled ? wardGeojsonUrl(city) : `/api/wards/${city}`;

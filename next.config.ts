@@ -7,6 +7,16 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      'date-fns',
+      'recharts',
+      'framer-motion',
+      '@turf/helpers',
+      '@turf/simplify',
+    ],
+  },
 };
 
 export default nextConfig;
