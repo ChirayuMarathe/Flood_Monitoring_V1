@@ -57,3 +57,4 @@ server.log
 /public/tiles/
 /public/data/buildings/
 *.gpkg
+*.tif

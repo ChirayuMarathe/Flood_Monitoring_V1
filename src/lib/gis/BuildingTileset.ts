@@ -1,4 +1,5 @@
 import * as Cesium from 'cesium';
+import { tilesetUrl, isRemoteEnabled } from './gisUrlResolver';
 
 const CESIUM_TOKEN = process.env.NEXT_PUBLIC_CESIUM_TOKEN || '';
 
@@ -6,14 +7,8 @@ const CESIUM_TOKEN = process.env.NEXT_PUBLIC_CESIUM_TOKEN || '';
  * Streaming 3D building layers:
  * 1. Cloud-streamed Cesium OSM Buildings (Ion Asset 96188) — 0 MB local disk footprint.
  * 2. Cloud-streamed Google Photorealistic 3D Tiles (Ion Asset 2275207).
- * 3. Optional local offline 3D Tiles under public/tiles/<city>/tileset.json (if present).
+ * 3. 3D Tiles from Supabase Storage (production) or local public/tiles/<city>/ (dev).
  */
-
-const TILESET_URLS: Record<string, string> = {
-  mumbai: '/tiles/mumbai/tileset.json',
-  pune: '/tiles/pune/tileset.json',
-  navi_mumbai: '/tiles/navi_mumbai/tileset.json',
-};
 
 /** Google Photorealistic 3D Tiles, served through the project's Cesium ion token. */
 const GOOGLE_PHOTOREAL_ION_ASSET = 2275207;
@@ -88,26 +83,30 @@ export async function loadOsmBuildingsTileset(
 }
 
 /**
- * Loads custom local city tileset if present under public/tiles/<city>/tileset.json.
- * Returns null if not found locally so caller can fall back to cloud OSM buildings.
+ * Loads city building tileset from Supabase Storage (production) or
+ * local public/tiles/<city>/tileset.json (dev).
+ * Returns null if not found, so caller can fall back to cloud OSM buildings.
  */
 export async function loadCityTileset(
   viewer: Cesium.Viewer,
   city: string,
   options: BuildingTilesetOptions = {}
 ): Promise<Cesium.Cesium3DTileset | null> {
-  const url = TILESET_URLS[city];
-  if (!url) return null;
+  const url = tilesetUrl(city);
 
   try {
-    // Quick probe to ensure the file exists and avoid 404 console noise
-    const probe = await fetch(url, { method: 'HEAD' });
-    if (!probe.ok) {
-      console.log(`[BuildingTileset] HEAD probe for ${url} returned ${probe.status} — skipping local tiles`);
-      return null;
+    // For local files, probe first to avoid 404 noise.
+    // For remote (Supabase), skip the probe — just attempt the load.
+    if (!isRemoteEnabled) {
+      const probe = await fetch(url, { method: 'HEAD' });
+      if (!probe.ok) {
+        console.log(`[BuildingTileset] HEAD probe for ${url} returned ${probe.status} — skipping local tiles`);
+        return null;
+      }
     }
 
-    console.log(`[BuildingTileset] Local tileset found at ${url}, loading...`);
+    const source = isRemoteEnabled ? 'Supabase Storage' : 'local';
+    console.log(`[BuildingTileset] Loading tileset from ${source}: ${url}`);
 
     const tileset = await Cesium.Cesium3DTileset.fromUrl(url, {
       maximumScreenSpaceError: options.maximumScreenSpaceError ?? 16,

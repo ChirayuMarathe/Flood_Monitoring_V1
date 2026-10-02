@@ -5,10 +5,12 @@
  * Loads ward_zonal_stats.csv, training_table_master.csv, and the enriched
  * daily climate CSV into typed arrays/maps.
  * 
- * All CSVs are served from /public/data/ and fetched client-side.
+ * CSVs are fetched from Supabase Storage (production) or /public/data/ (dev),
+ * resolved via gisUrlResolver.
  */
 
 import type { WardZonalStats, TrainingTableRow, ClimateSnapshot } from './WardRiskProfile';
+import { climateDataUrl } from '../gis/gisUrlResolver';
 
 /**
  * Generic CSV parser — splits lines and maps headers to values.
@@ -53,7 +55,7 @@ function safeInt(val: string | undefined): number {
  * flow_accumulation_max, twi_mean, twi_min, twi_max
  */
 export async function loadWardZonalStats(): Promise<Map<number, WardZonalStats>> {
-  const response = await fetch('/data/ward_zonal_stats.csv');
+  const response = await fetch(climateDataUrl('ward_zonal_stats.csv'));
   const text = await response.text();
   const rows = parseCSV(text);
   
@@ -90,7 +92,7 @@ export async function loadWardZonalStats(): Promise<Map<number, WardZonalStats>>
  * CSV parsing issues — we handle this gracefully.
  */
 export async function loadTrainingTable(): Promise<TrainingTableRow[]> {
-  const response = await fetch('/data/training_table_master.csv');
+  const response = await fetch(climateDataUrl('training_table_master.csv'));
   const text = await response.text();
   const rows = parseCSV(text);
   
@@ -141,7 +143,7 @@ export async function loadTrainingTable(): Promise<TrainingTableRow[]> {
  * rain_prev_day, rain_next_day
  */
 export async function loadClimateTimeSeries(): Promise<ClimateSnapshot[]> {
-  const response = await fetch('/data/mumbai_climate_daily_avg.csv');
+  const response = await fetch(climateDataUrl('mumbai_climate_daily_avg.csv'));
   const text = await response.text();
   const rows = parseCSV(text);
   

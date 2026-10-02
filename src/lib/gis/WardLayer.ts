@@ -29,6 +29,7 @@ import {
 import { CITY_COLORS, extractNormalizedProperties, type NormalizedWardProperties } from './WardData';
 import { HazardPins } from './HazardPins';
 import { wardProfileKey, type WardRiskProfile } from '../risk/WardRiskProfile';
+import { isRemoteEnabled, wardGeojsonUrl } from './gisUrlResolver';
 
 type CityKey = 'mumbai' | 'pune' | 'navi_mumbai';
 
@@ -98,17 +99,24 @@ export class WardLayer {
    * Load a single city's ward boundaries.
    */
   private async loadCity(city: CityKey): Promise<void> {
-    const apiUrl = `/api/wards/${city}`;
+    // When remote storage is configured, fetch pre-normalized GeoJSON directly
+    // from Supabase CDN. Otherwise use the local API route which normalizes on the fly.
+    const apiUrl = isRemoteEnabled ? wardGeojsonUrl(city) : `/api/wards/${city}`;
+    const source = isRemoteEnabled ? 'Supabase Storage' : 'API route';
 
-    // Fetch normalized GeoJSON from the API route
+    // Fetch normalized GeoJSON
     const response = await fetch(apiUrl);
     if (!response.ok) {
-      throw new Error(`API returned ${response.status} for ${city}`);
+      throw new Error(`${source} returned ${response.status} for ${city}`);
     }
     const geojson = await response.json();
 
-    // Log the normalization info from headers
-    console.log(`[WardLayer] ${city} — wards: ${response.headers.get('X-Ward-Count')}, coords fixed: ${response.headers.get('X-Coords-Fixed')}, simplified: ${response.headers.get('X-Simplified')}`);
+    // Log the normalization info from headers (API route only)
+    if (!isRemoteEnabled) {
+      console.log(`[WardLayer] ${city} — wards: ${response.headers.get('X-Ward-Count')}, coords fixed: ${response.headers.get('X-Coords-Fixed')}, simplified: ${response.headers.get('X-Simplified')}`);
+    } else {
+      console.log(`[WardLayer] ${city} — loaded from ${source}`);
+    }
 
     // Load into Cesium GeoJsonDataSource
     const dataSource = new GeoJsonDataSource(`wards_${city}`);
