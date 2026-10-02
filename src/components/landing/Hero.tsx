@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useRef } from 'react';
-import { ArrowRight, ChevronDown, ShieldAlert, Activity } from 'lucide-react';
+import { ArrowRight, Activity } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { CobeGlobe } from './CobeGlobe';
@@ -199,9 +199,12 @@ export default function HeroSection() {
           >
             
             <motion.div variants={itemVariants} className="flex flex-col gap-6">
-              <span className="text-[11px] font-bold tracking-[0.2em] text-gray-400 uppercase">
-                AI-Driven • Real-Time • Predictive
-              </span>
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/10 w-fit backdrop-blur-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#5EA977] animate-pulse" />
+                <span className="text-[10px] font-semibold tracking-[0.2em] text-gray-300 uppercase font-mono">
+                  Live Monsoon Twin • 24 Wards
+                </span>
+              </div>
               
               <h1 className="text-6xl lg:text-[80px] leading-[1.05] font-medium font-clash tracking-tight">
                 Predict the <br />
@@ -215,58 +218,54 @@ export default function HeroSection() {
             </motion.div>
 
             <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4 mt-2">
-              <Link href="/map" className="group flex items-center justify-center gap-2 bg-white text-[#0A0A0A] px-7 py-3.5 rounded-full font-medium hover:bg-gray-200 transition-all duration-300 shadow-[0_0_40px_rgba(255,255,255,0.12)] hover:shadow-[0_0_60px_rgba(255,255,255,0.2)]">
-                Launch Simulation 
+              <Link 
+                href="/map" 
+                className="group flex items-center justify-center gap-2 bg-white text-[#0A0A0A] px-7 py-3.5 rounded-full font-medium hover:bg-gray-100 transition-all duration-300 shadow-[0_0_35px_rgba(255,255,255,0.15)] hover:shadow-[0_0_50px_rgba(255,255,255,0.28)]"
+              >
+                Launch 3D Simulation 
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </Link>
-              <Link href="/dashboard" className="flex items-center justify-center px-7 py-3.5 rounded-full font-medium border border-white/15 text-white/60 hover:text-white/80 hover:border-white/30 transition-all duration-300">
-                View Live Wards
+              <Link 
+                href="/dashboard" 
+                className="group flex items-center justify-center gap-2 px-7 py-3.5 rounded-full font-medium border border-white/15 bg-white/[0.03] text-white/80 hover:text-white hover:border-white/35 hover:bg-white/[0.08] backdrop-blur-sm transition-all duration-300"
+              >
+                <Activity className="w-4 h-4 text-[#5EA977] group-hover:scale-110 transition-transform" />
+                Command Center
               </Link>
             </motion.div>
 
-            <motion.div variants={itemVariants} className="flex flex-wrap items-center gap-4 text-[10px] text-gray-500 tracking-[0.15em] uppercase mt-6 border-b border-white/10 pb-8">
-              <span className="hover:text-white cursor-pointer transition-colors">3D Topography</span>
+            <motion.div variants={itemVariants} className="flex flex-wrap items-center gap-4 text-[10px] text-gray-400 tracking-[0.15em] uppercase mt-6 border-b border-white/10 pb-8">
+              <Link href="/map" className="hover:text-white transition-colors cursor-pointer">3D Topography</Link>
               <span className="w-[1px] h-3 bg-white/20"></span>
-              <span className="hover:text-white cursor-pointer transition-colors">Weather Triggers</span>
+              <Link href="/dashboard" className="hover:text-white transition-colors cursor-pointer">Weather Triggers</Link>
               <span className="w-[1px] h-3 bg-white/20"></span>
-              <span className="hover:text-white cursor-pointer transition-colors">RAG Alerts</span>
+              <Link href="/alerts" className="hover:text-white transition-colors cursor-pointer">RAG Alerts</Link>
             </motion.div>
 
             <motion.div variants={itemVariants} className="flex items-start gap-0 mt-2">
               <div className="flex flex-col gap-1.5">
                 <span className="text-[32px] font-bold font-clash text-white">24</span>
-                <span className="text-[9px] uppercase tracking-[0.15em] text-gray-500">Monitored Wards</span>
+                <span className="text-[9px] uppercase tracking-[0.15em] text-gray-500 font-mono">Monitored Wards</span>
               </div>
               
               <span className="block w-[1px] h-[36px] bg-white/10 mx-8 mt-2" />
               
               <div className="flex flex-col gap-1.5">
                 <span className="text-[32px] font-bold font-clash text-white">&lt; 1s</span>
-                <span className="text-[9px] uppercase tracking-[0.15em] text-gray-500">AI Prediction</span>
+                <span className="text-[9px] uppercase tracking-[0.15em] text-gray-500 font-mono">AI Prediction</span>
               </div>
               
               <span className="block w-[1px] h-[36px] bg-white/10 mx-8 mt-2" />
               
               <div className="flex flex-col gap-1.5">
                 <span className="text-[32px] font-bold font-clash text-white">34-Yr</span>
-                <span className="text-[9px] uppercase tracking-[0.15em] text-gray-500">Climate Model</span>
+                <span className="text-[9px] uppercase tracking-[0.15em] text-gray-500 font-mono">Climate Model</span>
               </div>
             </motion.div>
 
           </motion.div>
         </div>
       </main>
-      
-      {/* =========================================
-          3. FLOATING CORNER BUTTONS
-          ========================================= */}
-      <button className="absolute bottom-8 left-8 w-10 h-10 bg-white rounded-full flex items-center justify-center text-black shadow-lg z-50 hover:scale-105 transition-transform cursor-pointer">
-        <ShieldAlert className="w-5 h-5" />
-      </button>
-
-      <button className="absolute bottom-8 right-8 w-10 h-10 bg-[#0A0A0A] border border-white/20 rounded-full flex items-center justify-center text-white shadow-[0_0_15px_rgba(255,255,255,0.05)] z-50 hover:bg-white/10 transition-colors cursor-pointer">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83"></path></svg>
-      </button>
     </div>
   );
 }

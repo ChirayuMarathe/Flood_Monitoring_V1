@@ -80,7 +80,7 @@ export async function POST(request: Request) {
       ? buildQueryPrompt(profile, userQuery)
       : buildAlertPrompt(profile);
 
-    const modelsToTry = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b'];
+    const modelsToTry = ['qwen/qwen3.8-27b', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'allam-2-7b'];
     let aiMessage = '';
     let lastErr: any = null;
 
@@ -88,11 +88,12 @@ export async function POST(request: Request) {
       try {
         const completion = await getGroqClient().chat.completions.create({
           model,
-          messages: [{ role: 'system', content: systemPrompt }],
+          messages: [{ role: 'user', content: systemPrompt }],
           temperature: 0.2,
-          max_tokens: 600,
+          max_tokens: 1000,
         });
-        aiMessage = completion.choices[0]?.message?.content || '';
+        const msg = completion.choices[0]?.message;
+        aiMessage = msg?.content || (msg as any)?.reasoning || '';
         if (aiMessage) break;
       } catch (err) {
         lastErr = err;
@@ -101,7 +102,7 @@ export async function POST(request: Request) {
     }
 
     if (!aiMessage) {
-      throw lastErr || new Error('No response generated.');
+      throw lastErr || new Error('No response generated from AI models.');
     }
     const sev = severityColors[profile.overallSeverity];
 

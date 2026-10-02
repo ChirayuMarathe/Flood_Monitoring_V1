@@ -208,6 +208,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No ward profiles provided' }, { status: 400 });
     }
 
+    if (!body.climateData) {
+      body.climateData = {
+        rainfall3DaySum: body.profiles[0]?.rainfall3DaySum ?? 65,
+        soilMoisture: body.profiles[0]?.soilMoisture ?? 0.45,
+        landSurfaceTemp: 29.0,
+        date: new Date().toISOString().split('T')[0],
+        timeIndex: 14,
+      };
+    }
+
     let systemPrompt: string;
     switch (body.reportType) {
       case 'forecast': systemPrompt = buildForecastPrompt(body); break;
@@ -218,7 +228,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Invalid report type' }, { status: 400 });
     }
 
-    const modelsToTry = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b'];
+    const modelsToTry = ['qwen/qwen3.8-27b', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'allam-2-7b'];
     let report = '';
     let lastErr: any = null;
 
@@ -226,11 +236,12 @@ export async function POST(request: Request) {
       try {
         const completion = await getGroqClient().chat.completions.create({
           model,
-          messages: [{ role: 'system', content: systemPrompt }],
+          messages: [{ role: 'user', content: systemPrompt }],
           temperature: 0.3,
           max_tokens: 2000,
         });
-        report = completion.choices[0]?.message?.content || '';
+        const msg = completion.choices[0]?.message;
+        report = msg?.content || (msg as any)?.reasoning || '';
         if (report) break;
       } catch (err) {
         lastErr = err;
