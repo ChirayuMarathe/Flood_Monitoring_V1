@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "copy-cesium": "cpx \"node_modules/cesium/Build/Cesium/Workers/**\" public/cesium/Workers -C && cpx \"node_modules/cesium/Build/Cesium/ThirdParty/**\" public/cesium/ThirdParty -C && cpx \"node_modules/cesium/Build/Cesium/Assets/**\" public/cesium/Assets -C && cpx \"node_modules/cesium/Build/Cesium/Widgets/**\" public/cesium/Widgets -C",
+    "postinstall": "node scripts/patch_spz.js",
     "dev": "npm run copy-cesium && next dev -p 3000",
-    "build": "npm run copy-cesium && next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
+    "build": "node scripts/patch_spz.js && npm run copy-cesium && next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
     "db:push": "prisma db push --accept-data-loss",
