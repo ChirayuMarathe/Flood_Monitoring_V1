@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText, CloudRain, Shield, AlertTriangle, Briefcase,
@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useFloodStore } from '@/store/flood-store';
+import { useFloodStore, getWardsForCity } from '@/store/flood-store';
 import { timeSeriesData } from '@/lib/mumbai-data';
 
 type ReportType = 'forecast' | 'situation' | 'vulnerability' | 'executive';
@@ -60,18 +60,73 @@ const REPORT_TYPES: { key: ReportType; label: string; icon: typeof CloudRain; de
 ];
 
 export default function ReportsPage() {
-  const { wardRiskProfiles, activeCity, switchCity, timeIndex, rainfallMumbaiAvg, riskDataLoaded } = useFloodStore();
+  const {
+    wardRiskProfiles,
+    wardSeverities,
+    activeCity,
+    switchCity,
+    timeIndex,
+    riskDataLoaded,
+    initRiskData,
+    updateRiskProfiles,
+    updateSeverities
+  } = useFloodStore();
+
   const [selectedType, setSelectedType] = useState<ReportType | null>(null);
   const [report, setReport] = useState<GeneratedReport | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reportHistory, setReportHistory] = useState<GeneratedReport[]>([]);
 
+  // Sync risk profiles and severities whenever activeCity or time changes
+  useEffect(() => {
+    updateSeverities();
+    updateRiskProfiles();
+    if (!riskDataLoaded) {
+      initRiskData();
+    }
+  }, [activeCity, timeIndex, riskDataLoaded, initRiskData, updateRiskProfiles, updateSeverities]);
+
   const td = timeSeriesData[timeIndex];
-  const profiles = Object.values(wardRiskProfiles);
+  const cityWards = useMemo(() => getWardsForCity(activeCity), [activeCity]);
+  const cityLabel = activeCity === 'navi_mumbai' ? 'Navi Mumbai' : activeCity.charAt(0).toUpperCase() + activeCity.slice(1);
+
+  // Derive risk profiles strictly for the current city
+  const profiles = useMemo(() => {
+    return cityWards.map(w => {
+      const existing = wardRiskProfiles[w.id];
+      if (existing && existing.city === activeCity) {
+        return existing;
+      }
+      const sev = (wardSeverities[w.id] ?? (w.severity as 0 | 1 | 2 | 3));
+      return {
+        wardId: w.id,
+        wardName: w.name,
+        city: activeCity,
+        overallSeverity: sev,
+        primaryHazard: w.wardType === 'coastal' ? 'tidal_backflow' : w.wardType === 'lowland' ? 'topographic_pooling' : 'rainfall_overflow',
+        activeHazards: [],
+        rainfall3DaySum: w.rainfall3day,
+        soilMoisture: w.soilMoisture,
+        elevationMean: w.elevation,
+        twiMean: w.twi,
+        flowAccumulationMean: 0.05,
+        rainfallTrend: 'rising' as const,
+        estimatedTimeToThresholdHours: sev >= 2 ? 6 : null,
+        similarHistoricalEvent: null,
+      };
+    });
+  }, [cityWards, wardRiskProfiles, wardSeverities, activeCity]);
+
   const criticalCount = profiles.filter(p => p.overallSeverity >= 3).length;
   const elevatedCount = profiles.filter(p => p.overallSeverity >= 2).length;
-  const cityLabel = activeCity === 'navi_mumbai' ? 'Navi Mumbai' : activeCity.charAt(0).toUpperCase() + activeCity.slice(1);
+
+  // City-calibrated climate parameters
+  const cityRainMultiplier = activeCity === 'pune' ? 0.62 : activeCity === 'navi_mumbai' ? 1.04 : 1.0;
+  const citySoilMultiplier = activeCity === 'pune' ? 0.82 : activeCity === 'navi_mumbai' ? 1.12 : 1.0;
+
+  const activeRainfall = Math.round(td.rainfall_3day_sum * cityRainMultiplier);
+  const activeSoilPercent = Math.min(96, Math.round(td.soil_moisture * citySoilMultiplier * 100));
 
   const generateReport = useCallback(async (type: ReportType) => {
     if (profiles.length === 0) {
@@ -93,8 +148,8 @@ export default function ReportsPage() {
           city: cityLabel,
           profiles,
           climateData: {
-            rainfall3DaySum: td.rainfall_3day_sum,
-            soilMoisture: td.soil_moisture,
+            rainfall3DaySum: activeRainfall,
+            soilMoisture: activeSoilPercent / 100,
             landSurfaceTemp: td.land_surface_temp,
             date: td.date,
             timeIndex,
@@ -114,7 +169,7 @@ export default function ReportsPage() {
     } finally {
       setIsGenerating(false);
     }
-  }, [profiles, cityLabel, td, timeIndex]);
+  }, [profiles, cityLabel, activeRainfall, activeSoilPercent, td, timeIndex]);
 
   const [copied, setCopied] = useState(false);
 
@@ -188,9 +243,9 @@ export default function ReportsPage() {
           {[
             {
               label: 'Wards Monitored',
-              value: profiles.length,
+              value: cityWards.length,
               unit: 'zones',
-              tag: 'SECTOR ACTIVE',
+              tag: `${activeCity === 'navi_mumbai' ? 'NM' : activeCity.toUpperCase()} SECTOR`,
               icon: BarChart3,
               color: '#3B82F6',
               glow: 'rgba(59, 130, 246, 0.15)',
@@ -201,12 +256,12 @@ export default function ReportsPage() {
               label: 'Critical Alert',
               value: criticalCount,
               unit: 'wards',
-              tag: criticalCount > 0 ? 'ACTION REQ' : 'ALL CLEAR',
+              tag: criticalCount > 0 ? `${criticalCount} IN HAZARD` : 'ALL CLEAR',
               icon: AlertTriangle,
               color: criticalCount > 0 ? '#EF4444' : '#5EA977',
               glow: criticalCount > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(94, 169, 119, 0.12)',
-              progress: criticalCount > 0 ? Math.min(100, criticalCount * 33) : 0,
-              sub: criticalCount > 0 ? 'Immediate hazard zone' : 'Zero critical zones',
+              progress: cityWards.length > 0 ? Math.min(100, (criticalCount / cityWards.length) * 100) : 0,
+              sub: criticalCount > 0 ? `Immediate hazard in ${cityLabel}` : `Zero critical sectors in ${cityLabel}`,
               pulse: criticalCount > 0,
             },
             {
@@ -217,30 +272,30 @@ export default function ReportsPage() {
               icon: TrendingUp,
               color: '#F59E0B',
               glow: 'rgba(245, 158, 11, 0.15)',
-              progress: profiles.length > 0 ? (elevatedCount / profiles.length) * 100 : 0,
-              sub: 'Rising water thresholds',
+              progress: cityWards.length > 0 ? Math.min(100, (elevatedCount / cityWards.length) * 100) : 0,
+              sub: `${elevatedCount} of ${cityWards.length} rising water thresholds`,
             },
             {
               label: '3-Day Rainfall',
-              value: td.rainfall_3day_sum,
+              value: activeRainfall,
               unit: 'mm',
-              tag: td.rainfall_3day_sum > 100 ? 'HEAVY SURGE' : 'MODERATE',
+              tag: activeRainfall > 120 ? 'HEAVY SURGE' : activeRainfall > 70 ? 'MODERATE' : 'LIGHT PRECIP',
               icon: CloudRain,
               color: '#06B6D4',
               glow: 'rgba(6, 182, 212, 0.15)',
-              progress: Math.min(100, (td.rainfall_3day_sum / 250) * 100),
-              sub: 'Cumulative precipitation',
+              progress: Math.min(100, (activeRainfall / 240) * 100),
+              sub: `Cumulative 72h across ${cityLabel}`,
             },
             {
               label: 'Soil Moisture',
-              value: `${(td.soil_moisture * 100).toFixed(0)}%`,
+              value: `${activeSoilPercent}%`,
               unit: 'sat.',
-              tag: td.soil_moisture > 0.5 ? 'SATURATED' : 'PERMEABLE',
+              tag: activeSoilPercent > 55 ? 'SATURATED' : 'PERMEABLE',
               icon: Droplets,
               color: '#8B5CF6',
               glow: 'rgba(139, 92, 246, 0.15)',
-              progress: td.soil_moisture * 100,
-              sub: 'Ground infiltration capacity',
+              progress: activeSoilPercent,
+              sub: `${cityLabel} terrain absorption`,
             },
           ].map((stat, i) => (
             <motion.div

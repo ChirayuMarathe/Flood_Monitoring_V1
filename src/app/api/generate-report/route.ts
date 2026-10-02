@@ -123,9 +123,11 @@ FORMATTING RULES: Output clean GitHub-Flavored Markdown without raw HTML tags. U
 }
 
 function buildVulnerabilityPrompt(req: ReportRequest): string {
+  const isPune = req.city.toLowerCase().includes('pune');
+  const lowlandThreshold = isPune ? 565 : 10;
   const wardsByType = {
     coastal: req.profiles.filter(p => p.activeHazards.some(h => h.type === 'tidal_backflow')),
-    lowland: req.profiles.filter(p => p.elevationMean < 10),
+    lowland: req.profiles.filter(p => p.elevationMean < lowlandThreshold),
     riverine: req.profiles.filter(p => p.activeHazards.some(h => h.type === 'river_overflow')),
     compound: req.profiles.filter(p => p.activeHazards.length >= 2),
   };

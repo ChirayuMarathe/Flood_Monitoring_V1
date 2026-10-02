@@ -1,87 +1,150 @@
 /**
  * wardClassification.ts
  * 
- * Manual classification of Mumbai's 24 wards for coastal/river proximity.
- * Based on:
- * - training_table_master.csv notes (e.g., "Mithi River", "Powai Lake overflowed",
- *   "coastal western seaboard")
- * - Known Mumbai geography
- * 
- * Ward GIDs match ward_zonal_stats.csv gid column.
+ * Geographic and hydrological classification of wards across:
+ * - Mumbai (24 wards: coastal Arabian Sea + Mithi/Dahisar/Poisar river network)
+ * - Pune (15 zones: inland Deccan plateau + Mula-Mutha river basin)
+ * - Navi Mumbai (14 zones: coastal Thane Creek / Panvel Creek wetlands & estuaries)
  */
 
 export interface WardClassification {
-  gid: number;
+  gid?: number;
+  wardId?: string;
   wardCode: string;
   isCoastal: boolean;
   nearRiver: boolean;
   riverName: string | null;
 }
 
-/**
- * Classification of all 24 Mumbai administrative wards.
- * 
- * Coastal wards: Those with direct Arabian Sea frontage where tidal backflow
- * can block stormwater discharge.
- * 
- * River-adjacent wards: Those near Mithi River, Dahisar River, Poisar River,
- * or Powai Lake (which overflows into Mithi).
- * 
- * Sources:
- * - 2005-07-26: "Powai Lake overflowed, discharging ~5.95M m³ into Mithi River" (ward S)
- * - 2005-07-26: "Built on reclaimed mangrove/swamp land along Mithi river" (ward H/E)
- * - 2017-08-29: "coastal western seaboard area heavily inundated" (ward G/S)
- * - 2017-08-29: "subway flooded, WEH gridlocked" (ward K/W, near Mithi)
- * - 2019-07-02: "Hindmata junction" (ward F/N, chronic Mithi-influenced flooding)
- */
-export const WARD_CLASSIFICATIONS: WardClassification[] = [
+// ==================================================================
+// 1. Mumbai Wards (24 Administrative Wards)
+// ==================================================================
+export const MUMBAI_CLASSIFICATIONS: WardClassification[] = [
   // --- Coastal wards (Arabian Sea frontage) ---
-  { gid: 1,  wardCode: 'A',    isCoastal: true,  nearRiver: false, riverName: null },           // Colaba — southern tip peninsula
-  { gid: 2,  wardCode: 'B',    isCoastal: true,  nearRiver: false, riverName: null },           // Churchgate — western waterfront
-  { gid: 3,  wardCode: 'C',    isCoastal: true,  nearRiver: false, riverName: null },           // Marine Drive — direct sea exposure
-  { gid: 4,  wardCode: 'D',    isCoastal: true,  nearRiver: false, riverName: null },           // Nariman Point — reclaimed land, sea on 3 sides
-  { gid: 7,  wardCode: 'G/S',  isCoastal: true,  nearRiver: false, riverName: null },           // Worli — western seaboard, severity 3 in 2017
-  { gid: 9,  wardCode: 'G/N',  isCoastal: true,  nearRiver: false, riverName: null },           // Dadar West — western coast
+  { gid: 1,  wardCode: 'A',    isCoastal: true,  nearRiver: false, riverName: null },           // Colaba
+  { gid: 2,  wardCode: 'B',    isCoastal: true,  nearRiver: false, riverName: null },           // Churchgate
+  { gid: 3,  wardCode: 'C',    isCoastal: true,  nearRiver: false, riverName: null },           // Marine Drive
+  { gid: 4,  wardCode: 'D',    isCoastal: true,  nearRiver: false, riverName: null },           // Nariman Point
+  { gid: 7,  wardCode: 'G/S',  isCoastal: true,  nearRiver: false, riverName: null },           // Worli
+  { gid: 9,  wardCode: 'G/N',  isCoastal: true,  nearRiver: false, riverName: null },           // Dadar West
 
   // --- River-adjacent wards (Mithi River corridor) ---
-  { gid: 14, wardCode: 'K/W',  isCoastal: false, nearRiver: true,  riverName: 'Mithi River' }, // Andheri — chronic Mithi flood spot, severity 3 in 2005 & 2017
-  { gid: 18, wardCode: 'H/E',  isCoastal: false, nearRiver: true,  riverName: 'Mithi River' }, // Santacruz/BKC — reclaimed mangrove along Mithi, severity 3 in 2005
-  { gid: 12, wardCode: 'S',    isCoastal: false, nearRiver: true,  riverName: 'Powai Lake' },  // Powai — lake overflows into Mithi
-  { gid: 24, wardCode: 'L',    isCoastal: false, nearRiver: true,  riverName: 'Mithi River' }, // Kurla — along Mithi, severity 3 in 2005
-  { gid: 8,  wardCode: 'F/N',  isCoastal: false, nearRiver: true,  riverName: 'Mithi River' }, // Sion/Matunga — Hindmata junction, chronic Mithi flooding
-  { gid: 20, wardCode: 'M/E',  isCoastal: false, nearRiver: true,  riverName: 'Mithi River' }, // Chembur East — downstream Mithi
+  { gid: 14, wardCode: 'K/W',  isCoastal: false, nearRiver: true,  riverName: 'Mithi River' }, // Andheri
+  { gid: 18, wardCode: 'H/E',  isCoastal: false, nearRiver: true,  riverName: 'Mithi River' }, // Santacruz/BKC
+  { gid: 12, wardCode: 'S',    isCoastal: false, nearRiver: true,  riverName: 'Powai Lake' },  // Powai
+  { gid: 24, wardCode: 'L',    isCoastal: false, nearRiver: true,  riverName: 'Mithi River' }, // Kurla
+  { gid: 8,  wardCode: 'F/N',  isCoastal: false, nearRiver: true,  riverName: 'Mithi River' }, // Sion/Matunga
+  { gid: 20, wardCode: 'M/E',  isCoastal: false, nearRiver: true,  riverName: 'Mithi River' }, // Chembur East
 
   // --- River-adjacent wards (Dahisar/Poisar) ---
-  { gid: 11, wardCode: 'R/C',  isCoastal: false, nearRiver: true,  riverName: 'Dahisar River' }, // Borivali — Dahisar river corridor
-  { gid: 16, wardCode: 'P/N',  isCoastal: false, nearRiver: true,  riverName: 'Poisar River' }, // Malad — Poisar river corridor
+  { gid: 11, wardCode: 'R/C',  isCoastal: false, nearRiver: true,  riverName: 'Dahisar River' }, // Borivali
+  { gid: 16, wardCode: 'P/N',  isCoastal: false, nearRiver: true,  riverName: 'Poisar River' }, // Malad
 
-  // --- Inland wards (no special coastal/river classification) ---
+  // --- Inland wards ---
   { gid: 5,  wardCode: 'E',    isCoastal: false, nearRiver: false, riverName: null },           // Byculla
   { gid: 6,  wardCode: 'F/S',  isCoastal: false, nearRiver: false, riverName: null },           // Parel
   { gid: 10, wardCode: 'N',    isCoastal: false, nearRiver: false, riverName: null },           // Ghatkopar
-  { gid: 13, wardCode: 'T',    isCoastal: false, nearRiver: false, riverName: null },           // Mulund — highland
-  { gid: 15, wardCode: 'R/N',  isCoastal: false, nearRiver: false, riverName: null },           // Dahisar (east side)
+  { gid: 13, wardCode: 'T',    isCoastal: false, nearRiver: false, riverName: null },           // Mulund
+  { gid: 15, wardCode: 'R/N',  isCoastal: false, nearRiver: false, riverName: null },           // Dahisar East
   { gid: 17, wardCode: 'M/W',  isCoastal: false, nearRiver: false, riverName: null },           // Chembur West
-  { gid: 19, wardCode: 'K/E',  isCoastal: false, nearRiver: false, riverName: null },           // Andheri East (inland side)
+  { gid: 19, wardCode: 'K/E',  isCoastal: false, nearRiver: false, riverName: null },           // Andheri East
   { gid: 21, wardCode: 'R/S',  isCoastal: false, nearRiver: false, riverName: null },           // Kandivali
   { gid: 22, wardCode: 'H/W',  isCoastal: false, nearRiver: false, riverName: null },           // Bandra West
-  { gid: 23, wardCode: 'N/W',  isCoastal: false, nearRiver: false, riverName: null },           // Juhu — could be coastal but mainly residential inland
+  { gid: 23, wardCode: 'N/W',  isCoastal: false, nearRiver: false, riverName: null },           // Juhu
 ];
 
-/**
- * Lookup a ward's classification by GID.
- */
-const classificationMap = new Map(WARD_CLASSIFICATIONS.map(w => [w.gid, w]));
+// ==================================================================
+// 2. Pune Wards (15 Administrative Zones)
+// All Pune zones are inland (zero coastal Arabian sea tides).
+// Key hydrological hazard is Mula, Mutha, and Mula-Mutha river corridors.
+// ==================================================================
+export const PUNE_CLASSIFICATIONS: WardClassification[] = [
+  { wardId: 'p1',  wardCode: 'SN', isCoastal: false, nearRiver: true,  riverName: 'Mula-Mutha Confluence' }, // Shivajinagar
+  { wardId: 'p2',  wardCode: 'KT', isCoastal: false, nearRiver: false, riverName: null },                   // Kothrud (highland)
+  { wardId: 'p3',  wardCode: 'HD', isCoastal: false, nearRiver: true,  riverName: 'Mula-Mutha Basin' },      // Hadapsar (critical basin)
+  { wardId: 'p4',  wardCode: 'HJ', isCoastal: false, nearRiver: false, riverName: null },                   // Hinjewadi (ridge plateau)
+  { wardId: 'p5',  wardCode: 'BN', isCoastal: false, nearRiver: true,  riverName: 'Ram Nadi Corridor' },     // Baner
+  { wardId: 'p6',  wardCode: 'KJ', isCoastal: false, nearRiver: true,  riverName: 'Katraj Lake Basin' },     // Katraj (lake catchment)
+  { wardId: 'p7',  wardCode: 'SR', isCoastal: false, nearRiver: true,  riverName: 'Mutha River Channel' },   // Sinhagad Road (dam discharge)
+  { wardId: 'p8',  wardCode: 'DG', isCoastal: false, nearRiver: true,  riverName: 'Mutha River Bank' },      // Deccan Gymkhana (low bridge zone)
+  { wardId: 'p9',  wardCode: 'KP', isCoastal: false, nearRiver: true,  riverName: 'Mula-Mutha River' },      // Koregaon Park
+  { wardId: 'p10', wardCode: 'VN', isCoastal: false, nearRiver: false, riverName: null },                   // Viman Nagar
+  { wardId: 'p11', wardCode: 'PC', isCoastal: false, nearRiver: true,  riverName: 'Pavana River' },          // Pimpri-Chinchwad
+  { wardId: 'p12', wardCode: 'WK', isCoastal: false, nearRiver: false, riverName: null },                   // Wakad (highland)
+  { wardId: 'p13', wardCode: 'MW', isCoastal: false, nearRiver: true,  riverName: 'Mula-Mutha River' },      // Mundhwa (chronic flood zone)
+  { wardId: 'p14', wardCode: 'WJ', isCoastal: false, nearRiver: true,  riverName: 'Mutha River Corridor' },  // Warje
+  { wardId: 'p15', wardCode: 'YW', isCoastal: false, nearRiver: true,  riverName: 'Mula-Mutha River' },      // Yerawada (flood embankment)
+];
 
-export function getWardClassification(gid: number): WardClassification | undefined {
-  return classificationMap.get(gid);
+// ==================================================================
+// 3. Navi Mumbai Wards (14 Administrative Nodes)
+// Prominent estuarine coastal creek influences: Thane Creek, Panvel Creek,
+// NRI coastal wetlands, and reclaimed mangrove tidal basins.
+// ==================================================================
+export const NAVI_MUMBAI_CLASSIFICATIONS: WardClassification[] = [
+  { wardId: 'nm1',  wardCode: 'VSH', isCoastal: true,  nearRiver: false, riverName: 'Thane Creek Estuary' }, // Vashi
+  { wardId: 'nm2',  wardCode: 'NRL', isCoastal: true,  nearRiver: false, riverName: 'Thane Creek Mudflats' }, // Nerul
+  { wardId: 'nm3',  wardCode: 'BLP', isCoastal: true,  nearRiver: true,  riverName: 'Belapur Creek' },        // CBD Belapur
+  { wardId: 'nm4',  wardCode: 'ARL', isCoastal: true,  nearRiver: false, riverName: 'Thane Creek Estuary' }, // Airoli
+  { wardId: 'nm5',  wardCode: 'KPK', isCoastal: true,  nearRiver: false, riverName: 'Thane Creek Outfall' }, // Kopar Khairane
+  { wardId: 'nm6',  wardCode: 'GNS', isCoastal: false, nearRiver: false, riverName: null },                   // Ghansoli
+  { wardId: 'nm7',  wardCode: 'SPD', isCoastal: false, nearRiver: false, riverName: null },                   // Sanpada
+  { wardId: 'nm8',  wardCode: 'TRB', isCoastal: false, nearRiver: false, riverName: null },                   // Turbhe (foothill)
+  { wardId: 'nm9',  wardCode: 'SWD', isCoastal: true,  nearRiver: false, riverName: 'NRI Coastal Wetlands' }, // Seawoods - Darave
+  { wardId: 'nm10', wardCode: 'KHG', isCoastal: false, nearRiver: false, riverName: null },                   // Kharghar (foothill)
+  { wardId: 'nm11', wardCode: 'ULW', isCoastal: true,  nearRiver: true,  riverName: 'Panvel Creek Basin' },   // Ulwe (critical coastal lowland)
+  { wardId: 'nm12', wardCode: 'DGH', isCoastal: false, nearRiver: false, riverName: null },                   // Digha
+  { wardId: 'nm13', wardCode: 'KMT', isCoastal: false, nearRiver: true,  riverName: 'Gadhi River Canal' },    // Kamothe
+  { wardId: 'nm14', wardCode: 'PNV', isCoastal: true,  nearRiver: true,  riverName: 'Kalundre River Estuary' },// Panvel
+];
+
+// Fallback legacy export
+export const WARD_CLASSIFICATIONS = MUMBAI_CLASSIFICATIONS;
+
+const mumbaiGidMap = new Map(MUMBAI_CLASSIFICATIONS.map(w => [w.gid, w]));
+const mumbaiCodeMap = new Map(MUMBAI_CLASSIFICATIONS.map(w => [w.wardCode, w]));
+
+const puneIdMap = new Map(PUNE_CLASSIFICATIONS.map(w => [w.wardId, w]));
+const puneCodeMap = new Map(PUNE_CLASSIFICATIONS.map(w => [w.wardCode, w]));
+
+const naviMumbaiIdMap = new Map(NAVI_MUMBAI_CLASSIFICATIONS.map(w => [w.wardId, w]));
+const naviMumbaiCodeMap = new Map(NAVI_MUMBAI_CLASSIFICATIONS.map(w => [w.wardCode, w]));
+
+/**
+ * City-aware classification lookup
+ */
+export function getWardClassificationForCity(
+  identifier: number | string,
+  city: 'mumbai' | 'pune' | 'navi_mumbai' = 'mumbai'
+): WardClassification | undefined {
+  const idStr = String(identifier).toLowerCase();
+
+  if (city === 'pune') {
+    return puneIdMap.get(idStr) || puneCodeMap.get(String(identifier).toUpperCase());
+  }
+
+  if (city === 'navi_mumbai') {
+    return naviMumbaiIdMap.get(idStr) || naviMumbaiCodeMap.get(String(identifier).toUpperCase());
+  }
+
+  // Mumbai: by GID or Ward Code
+  if (typeof identifier === 'number') {
+    return mumbaiGidMap.get(identifier);
+  }
+  const numeric = parseInt(idStr.replace(/\D/g, ''), 10);
+  if (!isNaN(numeric) && mumbaiGidMap.has(numeric)) {
+    return mumbaiGidMap.get(numeric);
+  }
+  return mumbaiCodeMap.get(String(identifier).toUpperCase());
 }
 
 /**
- * Lookup by ward code (e.g., "K/W", "H/E").
+ * Legacy lookup for backward compatibility
  */
-const codeMap = new Map(WARD_CLASSIFICATIONS.map(w => [w.wardCode, w]));
+export function getWardClassification(gid: number): WardClassification | undefined {
+  return mumbaiGidMap.get(gid);
+}
 
 export function getWardClassificationByCode(code: string): WardClassification | undefined {
-  return codeMap.get(code);
+  return mumbaiCodeMap.get(code);
 }

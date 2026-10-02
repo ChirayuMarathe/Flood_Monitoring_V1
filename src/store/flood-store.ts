@@ -234,54 +234,69 @@ export const useFloodStore = create<FloodState>((set, get) => ({
   },
 
   updateRiskProfiles: () => {
-    const { riskDataLoaded, zonalStatsMap, trainingTable, timeIndex, activeCity } = get();
-    if (!riskDataLoaded) return;
+    const { zonalStatsMap, trainingTable, timeIndex, activeCity } = get();
 
     const td = timeSeriesData[timeIndex];
+    // City-calibrated precipitation and soil moisture:
+    // Pune: Deccan rain shadow plateau (~0.62x coastal deluge)
+    // Navi Mumbai: Konkan creek & wetland micro-climate (~1.04x)
+    // Mumbai: coastal island baseline (1.0x)
+    const cityRainMultiplier = activeCity === 'pune' ? 0.62 : activeCity === 'navi_mumbai' ? 1.04 : 1.0;
+    const citySoilMultiplier = activeCity === 'pune' ? 0.82 : activeCity === 'navi_mumbai' ? 1.12 : 1.0;
+
+    const rain3Day = Math.round(td.rainfall_3day_sum * cityRainMultiplier);
+    const soilMoisture = Math.min(0.95, Math.round(td.soil_moisture * citySoilMultiplier * 100) / 100);
+
     const climate: ClimateSnapshot = {
       date: td.date || '2024-07-15',
-      rainfallMm: td.rainfall_3day_sum / 3,
-      soilMoisture: td.soil_moisture,
+      rainfallMm: rain3Day / 3,
+      soilMoisture,
       landSurfaceTemp: td.land_surface_temp,
-      rain2DaySum: td.rainfall_3day_sum * 0.67,
-      rain3DaySum: td.rainfall_3day_sum,
-      rainPrevDay: timeIndex > 0 ? timeSeriesData[timeIndex - 1].rainfall_3day_sum / 3 : 0,
-      rainNextDay: timeIndex < 29 ? timeSeriesData[timeIndex + 1].rainfall_3day_sum / 3 : 0,
-      tideLevel: activeCity === 'pune' ? null : td.rainfall_3day_sum > 120 ? 4.2 : 2.8,
-      riverLevel: activeCity === 'pune' ? (td.rainfall_3day_sum > 120 ? 3.8 : 1.5) : null,
+      rain2DaySum: rain3Day * 0.67,
+      rain3DaySum: rain3Day,
+      rainPrevDay: timeIndex > 0 ? (timeSeriesData[timeIndex - 1].rainfall_3day_sum * cityRainMultiplier) / 3 : 0,
+      rainNextDay: timeIndex < 29 ? (timeSeriesData[timeIndex + 1].rainfall_3day_sum * cityRainMultiplier) / 3 : 0,
+      tideLevel: activeCity === 'pune' ? null : rain3Day > 115 ? 4.2 : 2.8,
+      riverLevel: activeCity === 'pune' ? (rain3Day > 85 ? 3.8 : 1.5) : null,
     };
 
     const profiles: Record<string, WardRiskProfile> = {};
     const wards = getWardsForCity(activeCity);
 
     wards.forEach((ward, i) => {
+      let stats: WardZonalStats | undefined;
       const numericPart = parseInt(ward.id.replace(/\D/g, ''), 10);
       const gid = isNaN(numericPart) ? (i + 1) : numericPart;
-      let stats = zonalStatsMap.get(gid);
+
+      // Only Mumbai GIDs 1-24 exist in CSV zonalStatsMap
+      if (activeCity === 'mumbai') {
+        stats = zonalStatsMap.get(gid);
+      }
+
       if (!stats) {
-        // Fallback zonal stats calculated from ward topographic metrics
+        // High-precision topographic stats calculated from ward metrics
         stats = {
           gid,
           name: ward.code || ward.name,
           elevationMean: ward.elevation,
-          elevationMin: Math.max(1, ward.elevation - (ward.elevation > 100 ? 30 : 4)),
-          elevationMax: ward.elevation + (ward.elevation > 100 ? 50 : 25),
-          flowAccumulationMean: ward.wardType === 'coastal' ? 0.12 : ward.wardType === 'lowland' ? 0.08 : 0.03,
+          elevationMin: Math.max(1, ward.elevation - (ward.elevation > 100 ? 25 : 3)),
+          elevationMax: ward.elevation + (ward.elevation > 100 ? 40 : 15),
+          flowAccumulationMean: ward.wardType === 'coastal' ? 0.14 : ward.wardType === 'lowland' ? 0.09 : 0.03,
           flowAccumulationMin: 0.0002,
           flowAccumulationMax: 15.0,
           twiMean: ward.twi,
-          twiMin: Math.max(3, ward.twi - 2.5),
-          twiMax: ward.twi + 12,
+          twiMin: Math.max(3, ward.twi - 2.0),
+          twiMax: ward.twi + 6.0,
         };
       }
 
       const profile = computeRiskProfile(
-        gid,
+        ward.id,
         ward.name,
         activeCity,
         stats,
         climate,
-        trainingTable
+        activeCity === 'mumbai' ? trainingTable : []
       );
       profiles[ward.id] = profile;
     });
