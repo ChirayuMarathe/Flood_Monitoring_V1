@@ -1,6 +1,6 @@
 'use client';
 
-import { Building2, AlertTriangle, CloudRain, Droplets, ArrowUpRight, Clock } from 'lucide-react';
+import { Building2, AlertTriangle, CloudRain, Droplets, ArrowUpRight, Clock, Map, FileText, Sparkles, CheckCircle2, Compass, Shield } from 'lucide-react';
 import { useFloodStore, getWardsForCity } from '@/store/flood-store';
 import { timeSeriesData } from '@/lib/mumbai-data';
 import dynamic from 'next/dynamic';
@@ -121,66 +121,113 @@ export default function DashboardPage() {
         <div className="grid grid-cols-3 gap-3">
           <SeverityChart />
           <RainfallChart />
-          {/* Quick Access Card */}
-          <div className="rounded-xl bg-[#13161D] border border-white/10 flex flex-col shadow-sm">
-            <div className="px-4 py-3 border-b border-white/10">
-              <h3 className="text-[14px] font-bold font-clash text-white">Quick Access</h3>
-            </div>
-            <div className="flex-1 p-3 space-y-2 font-satoshi">
-              <Link href="/map" className="flex items-center justify-between px-3.5 py-2.5 rounded-lg bg-[#1A1E27] border border-white/10 hover:border-[#5EA977]/50 transition-colors group">
-                <div>
-                  <p className="text-[12px] font-semibold text-white group-hover:text-[#5EA977] transition-colors">Live 3D Map</p>
-                  <p className="text-[10px] text-[#8B919E]">Geospatial terrain & simulation</p>
+          {/* Command Action Hub Card */}
+          <div className="rounded-2xl bg-[#0B0D14]/90 backdrop-blur-xl border border-white/10 p-5 shadow-[0_12px_32px_rgba(0,0,0,0.55)] flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                    <Compass size={13} className="text-[#10B981]" />
+                  </div>
+                  <div>
+                    <h3 className="text-[13px] font-bold font-clash text-white tracking-tight">Command Hub</h3>
+                    <p className="text-[10px] text-gray-400 font-mono">Mission control shortcuts</p>
+                  </div>
                 </div>
-                <ArrowUpRight size={14} className="text-[#8B919E] group-hover:text-[#5EA977] transition-colors" />
-              </Link>
-              <Link href="/reports" className="flex items-center justify-between px-3.5 py-2.5 rounded-lg bg-[#1A1E27] border border-white/10 hover:border-[#A78BFA]/50 transition-colors group">
-                <div>
-                  <p className="text-[12px] font-semibold text-white group-hover:text-[#A78BFA] transition-colors">AI Flood Reports</p>
-                  <p className="text-[10px] text-[#8B919E]">Dynamic NLP forecast & SITREP</p>
-                </div>
-                <ArrowUpRight size={14} className="text-[#8B919E] group-hover:text-[#A78BFA] transition-colors" />
-              </Link>
-              <Link href="/alerts" className="flex items-center justify-between px-3.5 py-2.5 rounded-lg bg-[#1A1E27] border border-white/10 hover:border-[#EF4444]/50 transition-colors group">
-                <div>
-                  <p className="text-[12px] font-semibold text-white group-hover:text-[#EF4444] transition-colors">Alert Center</p>
-                  <p className="text-[10px] text-[#8B919E]">Ward hazard status & timeline</p>
-                </div>
-                <ArrowUpRight size={14} className="text-[#8B919E] group-hover:text-[#EF4444] transition-colors" />
-              </Link>
-              <div className="px-3.5 py-3 rounded-lg bg-[#1A1E27] border border-white/10">
-                <p className="text-[12px] font-semibold text-white">Critical Wards</p>
-                <div className="mt-2 space-y-1.5">
-                  {cityWards
-                    .filter((w) => (wardSeverities[w.id] ?? 0) >= 2)
-                    .slice(0, 4)
-                    .map((w) => {
-                      const sev = wardSeverities[w.id] ?? 0;
-                      return (
-                        <div key={w.id} className="flex items-center justify-between">
-                          <span className="text-[11px] text-[#8B919E]">{w.name}</span>
-                          <span className={`text-[10px] font-medium ${sev === 3 ? 'text-[#D94444]' : 'text-[#8B919E]'}`}>
-                            {sev === 3 ? 'Critical' : 'Elevated'}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  {Object.values(wardSeverities).filter((s) => s >= 2).length === 0 && (
-                    <p className="text-[10px] text-[#525866]">No elevated wards</p>
-                  )}
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono text-emerald-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>ONLINE</span>
                 </div>
               </div>
-              <div className="px-3.5 py-3 rounded-lg bg-[#1A1E27] border border-white/10">
-                <div className="flex items-center justify-between">
-                  <p className="text-[12px] font-semibold text-white">Rainfall 3-Day</p>
-                  <p className="text-[14px] font-bold font-clash text-white">{td.rainfall_3day_sum}<span className="text-[10px] text-[#8B919E] ml-0.5 font-satoshi">mm</span></p>
-                </div>
-                <div className="mt-2 w-full h-1.5 rounded-full bg-[#242832] overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-[#5EA977] transition-all duration-500"
-                    style={{ width: `${Math.min(100, (td.rainfall_3day_sum / 300) * 100)}%` }}
-                  />
-                </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-2">
+                <Link 
+                  href="/map" 
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/10 hover:border-emerald-500/40 hover:bg-emerald-500/[0.04] transition-all group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Map size={13} className="text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-[12px] font-semibold text-white group-hover:text-emerald-300 transition-colors font-satoshi">Live 3D Map</p>
+                      <p className="text-[10px] text-gray-400 font-mono">3D Terrain & Building Simulation</p>
+                    </div>
+                  </div>
+                  <ArrowUpRight size={13} className="text-gray-500 group-hover:text-emerald-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                </Link>
+
+                <Link 
+                  href="/reports" 
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/10 hover:border-purple-500/40 hover:bg-purple-500/[0.04] transition-all group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <FileText size={13} className="text-purple-400" />
+                    </div>
+                    <div>
+                      <p className="text-[12px] font-semibold text-white group-hover:text-purple-300 transition-colors font-satoshi">AI Flood Reports</p>
+                      <p className="text-[10px] text-gray-400 font-mono">Dynamic LLM Situation Reports</p>
+                    </div>
+                  </div>
+                  <ArrowUpRight size={13} className="text-gray-500 group-hover:text-purple-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                </Link>
+
+                <Link 
+                  href="/alerts" 
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/10 hover:border-red-500/40 hover:bg-red-500/[0.04] transition-all group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <AlertTriangle size={13} className="text-red-400" />
+                    </div>
+                    <div>
+                      <p className="text-[12px] font-semibold text-white group-hover:text-red-300 transition-colors font-satoshi">Alert Center</p>
+                      <p className="text-[10px] text-gray-400 font-mono">Incident Feed & Live Chronology</p>
+                    </div>
+                  </div>
+                  <ArrowUpRight size={13} className="text-gray-500 group-hover:text-red-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                </Link>
+              </div>
+            </div>
+
+            {/* At-Risk Wards Live Watch */}
+            <div className="mt-3 pt-3 border-t border-white/10">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-mono text-gray-400 font-semibold uppercase tracking-wider">Hazard Watchlist</span>
+                <span className="text-[9.5px] font-mono text-gray-500">
+                  {alertCount > 0 ? `${alertCount} elevated` : 'All Clear'}
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {cityWards
+                  .filter((w) => (wardSeverities[w.id] ?? 0) >= 2)
+                  .slice(0, 3)
+                  .map((w) => {
+                    const sev = wardSeverities[w.id] ?? 0;
+                    return (
+                      <Link
+                        key={w.id}
+                        href="/map"
+                        onClick={() => useFloodStore.getState().setSelectedWard(w.id)}
+                        className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white/[0.02] border border-white/5 hover:border-white/20 transition-colors"
+                      >
+                        <span className="text-[11px] text-gray-300 font-satoshi font-medium truncate max-w-[150px]">{w.name}</span>
+                        <span className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border ${
+                          sev === 3 ? 'bg-red-500/15 text-red-400 border-red-500/30' : 'bg-orange-500/15 text-orange-400 border-orange-500/30'
+                        }`}>
+                          {sev === 3 ? 'Critical' : 'Elevated'}
+                        </span>
+                      </Link>
+                    );
+                  })}
+                {cityWards.filter((w) => (wardSeverities[w.id] ?? 0) >= 2).length === 0 && (
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/15 text-[11px] text-emerald-400">
+                    <CheckCircle2 size={13} className="shrink-0" />
+                    <span>No elevated risk zones detected in sector</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
