@@ -23,39 +23,67 @@ const hazardTypeLabel = (type: HazardType) => {
 };
 
 function buildAlertPrompt(profile: WardRiskProfile): string {
+  const sevLabels: Record<number, string> = {
+    0: 'MINIMAL RISK (NOMINAL)',
+    1: 'LOW RISK (WATCH)',
+    2: 'MODERATE RISK (ELEVATED)',
+    3: 'CRITICAL RISK (IMMEDIATE ACTION REQUIRED)',
+  };
+  const sevLabel = sevLabels[profile.overallSeverity] || 'ASSESSMENT PENDING';
+
   const hazardSummary = profile.activeHazards
-    .map((h) => `- ${hazardTypeLabel(h.type)}: ${h.explanation}`)
+    .map((h) => `- **${hazardTypeLabel(h.type)}** (${(h.contributionScore * 100).toFixed(0)}% contribution): ${h.explanation}`)
     .join("\n");
 
   const historicalNote = profile.similarHistoricalEvent
-    ? `The closest historical match is ${profile.similarHistoricalEvent.date}, when ${profile.similarHistoricalEvent.outcome.toLowerCase()}.`
-    : "No closely matching historical event was found.";
+    ? `Closest historical benchmark is **${profile.similarHistoricalEvent.date}**, when *${profile.similarHistoricalEvent.outcome}* (${profile.similarHistoricalEvent.similarityNote}).`
+    : "No closely matching historical flood event in municipal records for these exact parameters.";
 
-  return `You are writing a short, clear flood risk alert for emergency planners about ${profile.wardName} in ${profile.city}.
+  return `You are the Tactical AI Commander for the Mumbai Disaster Management Emergency Operations Center (EOC).
+Generate a structured, eye-catching Emergency Protocol Briefing for ${profile.wardName} (${profile.city.toUpperCase()}).
 
-Current severity: ${profile.overallSeverity}/3.
+WARD TELEMETRY & PROFILE:
+- Ward: ${profile.wardName} | Sector: ${profile.city.toUpperCase()}
+- Current Threat Level: Severity ${profile.overallSeverity}/3 — ${sevLabel}
+- Primary Hazard: ${hazardTypeLabel(profile.primaryHazard)}
+- 3-Day Precipitation: ${profile.rainfall3DaySum.toFixed(0)}mm (Trend: ${profile.rainfallTrend.toUpperCase()})
+- Soil Moisture Saturation: ${(profile.soilMoisture * 100).toFixed(0)}%
+- Topographic Elevation Mean: ${profile.elevationMean.toFixed(1)}m
+- Topographic Wetness Index (TWI): ${profile.twiMean.toFixed(1)}
+- Active Contributing Factors:
+${hazardSummary || "- None: Baseline dry weather conditions."}
 
-Active contributing factors:
-${hazardSummary || "No active risk factors at current conditions."}
-
-Current readings:
-- 3-Day Rainfall: ${profile.rainfall3DaySum.toFixed(0)}mm (trend: ${profile.rainfallTrend})
-- Soil Moisture: ${(profile.soilMoisture * 100).toFixed(0)}%
-- Average Elevation: ${profile.elevationMean.toFixed(1)}m
-- Wetness Index (TWI): ${profile.twiMean.toFixed(1)}
-
+HISTORICAL BENCHMARK:
 ${historicalNote}
 
-Write a 2-3 sentence plain-language alert using ONLY the numbers and facts given above. Do not invent additional statistics. Do not speculate beyond what the data supports. Be direct and actionable.`;
+FORMAT YOUR RESPONSE EXACTLY AS FOLLOWS (Use Markdown):
+
+### 🚨 SITUATION ASSESSMENT
+Provide a concise, powerful 2-sentence executive summary analyzing current flood susceptibility in ${profile.wardName}, quoting the exact rainfall (${profile.rainfall3DaySum.toFixed(0)}mm) and soil moisture (${(profile.soilMoisture * 100).toFixed(0)}%).
+
+### ⚡ HYDROLOGIC RISK DRIVERS
+* **Precipitation & Infiltration:** Analyze how the ${profile.rainfall3DaySum.toFixed(0)}mm rainfall and ${(profile.soilMoisture * 100).toFixed(0)}% soil saturation interact at ${profile.elevationMean.toFixed(1)}m elevation.
+* **Basin Vulnerability:** Evaluate topographic pooling (TWI ${profile.twiMean.toFixed(1)}) and primary hazard (${hazardTypeLabel(profile.primaryHazard)}).
+* **Historical Precedent:** ${historicalNote}
+
+### 🛡️ TACTICAL ACTION DIRECTIVES
+1. **Pumps & Stormwater Drainage:** [Specific directive for dewatering pumps & culvert clearing for Severity ${profile.overallSeverity}]
+2. **Traffic & Low-Lying Subways:** [Advisory for subways/transit routes based on current risk]
+3. **Emergency Readiness Level:** [Declare readiness posture: Code Green (Normal) / Code Yellow (Watch) / Code Orange (Alert) / Code Red (Evacuation/Deploy)]
+
+**Commander's Note:** [1-sentence bottom-line takeaway for field emergency crews].
+
+Rules: Write professionally, authoritatively, and concisely. Use ONLY the data provided. Do not invent fake statistics. Do not use raw HTML.`;
 }
 
 function buildQueryPrompt(profile: WardRiskProfile, userQuery: string): string {
   const context = buildAlertPrompt(profile);
   return `${context}
 
-The user (an emergency planner) is asking: "${userQuery}"
+The Emergency Operations Commander is asking a direct tactical question:
+"${userQuery}"
 
-Answer their question using ONLY the data provided above. Be concise (2-4 sentences). If the data doesn't support an answer, say so honestly.`;
+Answer their question directly in 2-4 concise, professional, bullet-pointed sentences using ONLY the verified ward telemetry above. Be precise with numbers and tactical protocol.`;
 }
 
 export async function POST(request: Request) {
