@@ -43,6 +43,12 @@ export function TopNavbar() {
         >
           Alerts
         </Link>
+        <Link 
+          href="/reports" 
+          className={`px-5 py-2 rounded-full font-medium transition-all ${pathname === '/reports' ? 'bg-white/15 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+        >
+          Reports
+        </Link>
       </div>
 
       {/* Right: Actions & Status */}

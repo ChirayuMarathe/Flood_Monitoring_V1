@@ -109,15 +109,15 @@ export async function loadCityTileset(
     console.log(`[BuildingTileset] Loading tileset from ${source}: ${url}`);
 
     const tileset = await Cesium.Cesium3DTileset.fromUrl(url, {
-      maximumScreenSpaceError: options.maximumScreenSpaceError ?? 16,
-      cacheBytes: 384 * 1024 * 1024,
-      maximumCacheOverflowBytes: 128 * 1024 * 1024,
+      maximumScreenSpaceError: options.maximumScreenSpaceError ?? 24,
+      cacheBytes: 256 * 1024 * 1024,
+      maximumCacheOverflowBytes: 64 * 1024 * 1024,
     });
 
     if (viewer.isDestroyed()) return null;
 
     tileset.customShader = buildingShader();
-    tileset.shadows = Cesium.ShadowMode.ENABLED;
+    tileset.shadows = Cesium.ShadowMode.DISABLED;
 
     if (options.onProgress) {
       const onProgress = options.onProgress;

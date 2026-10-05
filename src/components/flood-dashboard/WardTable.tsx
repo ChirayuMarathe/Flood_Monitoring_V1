@@ -6,10 +6,10 @@ import { useRouter } from 'next/navigation';
 import { ArrowUpRight, ShieldCheck, Layers } from 'lucide-react';
 
 const severityPill: Record<number, { label: string; badge: string; dot: string }> = {
-  0: { label: 'Normal', badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', dot: 'bg-emerald-400' },
-  1: { label: 'Watch', badge: 'bg-amber-500/10 text-amber-400 border-amber-500/20', dot: 'bg-amber-400' },
-  2: { label: 'Elevated', badge: 'bg-orange-500/10 text-orange-400 border-orange-500/20', dot: 'bg-orange-400' },
-  3: { label: 'Critical', badge: 'bg-red-500/15 text-red-400 border-red-500/30', dot: 'bg-red-400 animate-ping' },
+  0: { label: 'Normal', badge: 'bg-white/[0.04] text-zinc-400 border-white/10', dot: 'bg-zinc-600' },
+  1: { label: 'Watch', badge: 'bg-white/[0.08] text-zinc-200 border-white/15', dot: 'bg-zinc-400' },
+  2: { label: 'Elevated', badge: 'bg-white/[0.14] text-white border-white/25', dot: 'bg-zinc-200' },
+  3: { label: 'Critical', badge: 'bg-white text-black font-bold border-white shadow-[0_0_12px_rgba(255,255,255,0.4)]', dot: 'bg-black animate-ping' },
 };
 
 export default function WardTable() {
@@ -30,7 +30,7 @@ export default function WardTable() {
   };
 
   return (
-    <div className="rounded-2xl overflow-hidden bg-[#0B0D14]/90 backdrop-blur-xl border border-white/10 shadow-[0_12px_32px_rgba(0,0,0,0.55)]">
+    <div className="rounded-2xl overflow-hidden bg-black/85 backdrop-blur-xl border border-white/10 shadow-[0_12px_32px_rgba(0,0,0,0.65)]">
       <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-white/[0.02]">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">

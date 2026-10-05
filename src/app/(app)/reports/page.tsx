@@ -11,6 +11,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useFloodStore, getWardsForCity } from '@/store/flood-store';
 import { timeSeriesData } from '@/lib/mumbai-data';
+import dynamic from 'next/dynamic';
+
+const BottomPanel = dynamic(() => import('@/components/flood-dashboard/BottomPanel'), { ssr: false });
 
 type ReportType = 'forecast' | 'situation' | 'vulnerability' | 'executive';
 
@@ -30,32 +33,32 @@ const REPORT_TYPES: { key: ReportType; label: string; icon: typeof CloudRain; de
     label: 'Rainfall Forecast',
     icon: CloudRain,
     description: 'Area-wise rainfall predictions with upcoming flood risk analysis for each ward',
-    color: '#5B8DEF',
-    gradient: 'from-[#5B8DEF]/20 to-[#5B8DEF]/5',
+    color: '#FFFFFF',
+    gradient: 'from-white/10 to-transparent',
   },
   {
     key: 'situation',
     label: 'Situation Report',
     icon: Shield,
     description: 'Current SITREP with complete ward status table and resource deployment recommendations',
-    color: '#5EA977',
-    gradient: 'from-[#5EA977]/20 to-[#5EA977]/5',
+    color: '#D4D4D8',
+    gradient: 'from-white/[0.08] to-transparent',
   },
   {
     key: 'vulnerability',
     label: 'Vulnerability Assessment',
     icon: AlertTriangle,
     description: 'Deep terrain analysis, compound risk zones, and historical vulnerability patterns',
-    color: '#F59E0B',
-    gradient: 'from-[#F59E0B]/20 to-[#F59E0B]/5',
+    color: '#A1A1AA',
+    gradient: 'from-white/[0.06] to-transparent',
   },
   {
     key: 'executive',
     label: 'Executive Briefing',
     icon: Briefcase,
     description: 'One-page summary for municipal leadership with key metrics and action items',
-    color: '#A78BFA',
-    gradient: 'from-[#A78BFA]/20 to-[#A78BFA]/5',
+    color: '#71717A',
+    gradient: 'from-white/[0.04] to-transparent',
   },
 ];
 
@@ -69,7 +72,8 @@ export default function ReportsPage() {
     riskDataLoaded,
     initRiskData,
     updateRiskProfiles,
-    updateSeverities
+    updateSeverities,
+    currentTimeData,
   } = useFloodStore();
 
   const [selectedType, setSelectedType] = useState<ReportType | null>(null);
@@ -87,7 +91,7 @@ export default function ReportsPage() {
     }
   }, [activeCity, timeIndex, riskDataLoaded, initRiskData, updateRiskProfiles, updateSeverities]);
 
-  const td = timeSeriesData[timeIndex];
+  const td = currentTimeData() || timeSeriesData[0];
   const cityWards = useMemo(() => getWardsForCity(activeCity), [activeCity]);
   const cityLabel = activeCity === 'navi_mumbai' ? 'Navi Mumbai' : activeCity.charAt(0).toUpperCase() + activeCity.slice(1);
 
@@ -204,7 +208,7 @@ export default function ReportsPage() {
         {/* Page Header with 3-City Switcher */}
         <div className="flex flex-col md:flex-row md:items-center justify-between pb-3 border-b border-white/5 gap-4">
           <div>
-            <span className="text-[10px] font-mono font-semibold tracking-[0.2em] text-[#A78BFA] uppercase">AI-POWERED ANALYSIS</span>
+            <span className="text-[10px] font-mono font-semibold tracking-[0.2em] text-zinc-400 uppercase">AI-POWERED ANALYSIS</span>
             <h2 className="text-[26px] font-bold font-clash text-white tracking-tight">Flood Reports</h2>
             <p className="text-[12px] text-[#8B919E] font-satoshi mt-0.5">
               Dynamic NLP report generation powered by real-time ward risk profiles in {cityLabel}
@@ -229,13 +233,18 @@ export default function ReportsPage() {
               ))}
             </div>
 
-            <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#13161D] border border-white/10 shadow-sm">
-              <Clock size={13} className="text-[#5EA977]" />
+            <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-black/80 border border-white/10 shadow-sm">
+              <Clock size={13} className="text-white" />
               <span className="text-[11px] text-[#E1E4EA] font-mono font-medium">
-                Day {timeIndex + 1} — Jul {timeSeriesData[timeIndex]?.day}
+                Day {timeIndex + 1} — {td.date ?? '2024-07-09'}
               </span>
             </div>
           </div>
+        </div>
+
+        {/* Embedded Interactive Simulation Timeline Controller */}
+        <div className="rounded-2xl overflow-hidden border border-white/10 bg-black/70 p-1 shadow-lg">
+          <BottomPanel mode="embedded" />
         </div>
 
         {/* High-End Mission Telemetry Strip */}
@@ -247,8 +256,8 @@ export default function ReportsPage() {
               unit: 'zones',
               tag: `${activeCity === 'navi_mumbai' ? 'NM' : activeCity.toUpperCase()} SECTOR`,
               icon: BarChart3,
-              color: '#3B82F6',
-              glow: 'rgba(59, 130, 246, 0.15)',
+              color: '#FFFFFF',
+              glow: 'rgba(255, 255, 255, 0.04)',
               progress: 100,
               sub: `${cityLabel} coverage`,
             },
@@ -258,8 +267,8 @@ export default function ReportsPage() {
               unit: 'wards',
               tag: criticalCount > 0 ? `${criticalCount} IN HAZARD` : 'ALL CLEAR',
               icon: AlertTriangle,
-              color: criticalCount > 0 ? '#EF4444' : '#5EA977',
-              glow: criticalCount > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(94, 169, 119, 0.12)',
+              color: criticalCount > 0 ? '#FFFFFF' : '#A1A1AA',
+              glow: criticalCount > 0 ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.02)',
               progress: cityWards.length > 0 ? Math.min(100, (criticalCount / cityWards.length) * 100) : 0,
               sub: criticalCount > 0 ? `Immediate hazard in ${cityLabel}` : `Zero critical sectors in ${cityLabel}`,
               pulse: criticalCount > 0,
@@ -270,8 +279,8 @@ export default function ReportsPage() {
               unit: 'wards',
               tag: elevatedCount > 0 ? 'WATCHLIST' : 'NOMINAL',
               icon: TrendingUp,
-              color: '#F59E0B',
-              glow: 'rgba(245, 158, 11, 0.15)',
+              color: '#D4D4D8',
+              glow: 'rgba(255, 255, 255, 0.05)',
               progress: cityWards.length > 0 ? Math.min(100, (elevatedCount / cityWards.length) * 100) : 0,
               sub: `${elevatedCount} of ${cityWards.length} rising water thresholds`,
             },
@@ -281,8 +290,8 @@ export default function ReportsPage() {
               unit: 'mm',
               tag: activeRainfall > 120 ? 'HEAVY SURGE' : activeRainfall > 70 ? 'MODERATE' : 'LIGHT PRECIP',
               icon: CloudRain,
-              color: '#06B6D4',
-              glow: 'rgba(6, 182, 212, 0.15)',
+              color: '#E4E4E7',
+              glow: 'rgba(255, 255, 255, 0.04)',
               progress: Math.min(100, (activeRainfall / 240) * 100),
               sub: `Cumulative 72h across ${cityLabel}`,
             },
@@ -292,8 +301,8 @@ export default function ReportsPage() {
               unit: 'sat.',
               tag: activeSoilPercent > 55 ? 'SATURATED' : 'PERMEABLE',
               icon: Droplets,
-              color: '#8B5CF6',
-              glow: 'rgba(139, 92, 246, 0.15)',
+              color: '#71717A',
+              glow: 'rgba(255, 255, 255, 0.02)',
               progress: activeSoilPercent,
               sub: `${cityLabel} terrain absorption`,
             },
@@ -303,11 +312,11 @@ export default function ReportsPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
-              className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-[#161922] via-[#10131B] to-[#0D0F15] p-4 border border-white/10 hover:border-white/20 transition-all duration-300 shadow-[0_6px_20px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] group"
+              className="relative overflow-hidden rounded-2xl bg-black/85 backdrop-blur-xl p-4 border border-white/10 hover:border-white/20 transition-all duration-300 shadow-[0_12px_32px_rgba(0,0,0,0.65),inset_0_1px_1px_rgba(255,255,255,0.06)] group"
             >
               {/* Radial glow */}
               <div
-                className="pointer-events-none absolute -top-8 -right-8 h-28 w-28 rounded-full blur-xl opacity-60 group-hover:opacity-100 transition-opacity"
+                className="pointer-events-none absolute -top-8 -right-8 h-28 w-28 rounded-full blur-xl opacity-40 group-hover:opacity-100 transition-opacity"
                 style={{ background: stat.glow }}
               />
 
@@ -382,8 +391,8 @@ export default function ReportsPage() {
                   disabled={isGenerating}
                   className={`w-full text-left px-4 py-4 rounded-2xl border transition-all duration-300 group relative overflow-hidden ${
                     isSelected
-                      ? 'bg-gradient-to-r from-[#171B26] to-[#12151E] border-white/25 shadow-[0_8px_24px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.12)]'
-                      : 'bg-gradient-to-b from-[#141720] to-[#0E1117] border-white/10 hover:border-white/20 hover:bg-[#181C26]'
+                      ? 'bg-black/95 border-white/25 shadow-[0_8px_24px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.1)]'
+                      : 'bg-black/75 border-white/10 hover:border-white/20 hover:bg-black/90'
                   } ${isGenerating ? 'opacity-60 cursor-wait' : ''}`}
                 >
                   {/* Left accent bar for selected state */}
@@ -532,16 +541,16 @@ export default function ReportsPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="rounded-xl bg-[#13161D] border border-white/10 overflow-hidden"
+                  className="rounded-2xl bg-black/90 border border-white/10 overflow-hidden shadow-[0_16px_40px_rgba(0,0,0,0.7)]"
                 >
                   {/* Report Header */}
-                  <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-[#13161D] to-[#1A1E27]">
+                  <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between bg-black/90">
                     <div className="flex items-center gap-3">
                       {(() => {
                         const rt = REPORT_TYPES.find(t => t.key === report.reportType);
                         const Icon = rt?.icon || FileText;
                         return (
-                          <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${rt?.color}20` }}>
+                          <div className="w-9 h-9 rounded-lg flex items-center justify-center border border-white/10" style={{ backgroundColor: `${rt?.color}18` }}>
                             <Icon size={16} style={{ color: rt?.color }} />
                           </div>
                         );
@@ -550,42 +559,42 @@ export default function ReportsPage() {
                         <h3 className="text-[14px] font-bold text-white font-clash">
                           {REPORT_TYPES.find(t => t.key === report.reportType)?.label}
                         </h3>
-                        <p className="text-[10px] text-[#525866] font-mono mt-0.5">
+                        <p className="text-[10px] text-[#8B919E] font-mono mt-0.5">
                           {report.city} · {report.wardCount} wards · Generated {new Date(report.generatedAt).toLocaleTimeString()}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       {report.criticalCount > 0 && (
-                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-[10px] font-medium text-red-400">
+                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-[10px] font-medium text-red-400">
                           <AlertTriangle size={10} /> {report.criticalCount} Critical
                         </span>
                       )}
                       <button
                         onClick={copyReport}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#1A1E27] border border-white/10 hover:bg-[#242832] transition-colors text-[11px] text-[#C1C5CD]"
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/10 hover:bg-white/[0.08] hover:text-white transition-colors text-[11px] text-[#C1C5CD]"
                         title="Copy report text"
                       >
-                        {copied ? <Check size={12} className="text-[#5EA977]" /> : <Copy size={12} className="text-[#8B919E]" />}
+                        {copied ? <Check size={12} className="text-white" /> : <Copy size={12} className="text-[#8B919E]" />}
                         <span className="text-[10px] font-mono">{copied ? 'Copied' : 'Copy'}</span>
                       </button>
                       <button
                         onClick={printReport}
-                        className="w-8 h-8 rounded-lg bg-[#1A1E27] border border-white/10 flex items-center justify-center hover:bg-[#242832] transition-colors"
+                        className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/10 flex items-center justify-center hover:bg-white/[0.08] hover:text-white transition-colors"
                         title="Print / PDF"
                       >
                         <Printer size={12} className="text-[#8B919E]" />
                       </button>
                       <button
                         onClick={() => selectedType && generateReport(selectedType)}
-                        className="w-8 h-8 rounded-lg bg-[#1A1E27] border border-white/10 flex items-center justify-center hover:bg-[#242832] transition-colors"
+                        className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/10 flex items-center justify-center hover:bg-white/[0.08] hover:text-white transition-colors"
                         title="Regenerate"
                       >
                         <RefreshCw size={12} className="text-[#8B919E]" />
                       </button>
                       <button
                         onClick={downloadReport}
-                        className="w-8 h-8 rounded-lg bg-[#1A1E27] border border-white/10 flex items-center justify-center hover:bg-[#242832] transition-colors"
+                        className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/10 flex items-center justify-center hover:bg-white/[0.08] hover:text-white transition-colors"
                         title="Download as Markdown"
                       >
                         <Download size={12} className="text-[#8B919E]" />
@@ -594,25 +603,25 @@ export default function ReportsPage() {
                   </div>
 
                   {/* Report Body with Rich GFM Formatting */}
-                  <div className="px-6 py-6 overflow-y-auto max-h-[620px] custom-scrollbar bg-[#0E1117]/60">
+                  <div className="px-6 py-6 overflow-y-auto max-h-[620px] custom-scrollbar bg-black/60">
                     <div className="report-markdown-content font-satoshi text-[#C1C5CD]">
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
                           h1: ({ children }) => (
                             <h1 className="text-[18px] font-bold font-clash text-white tracking-tight mt-6 mb-3 pb-2 border-b border-white/10 flex items-center gap-2">
-                              <span className="w-1.5 h-4.5 rounded-full bg-[#5B8DEF]" />
+                              <span className="w-1.5 h-4.5 rounded-full bg-white" />
                               {children}
                             </h1>
                           ),
                           h2: ({ children }) => (
-                            <h2 className="text-[15px] font-bold font-clash text-white tracking-tight mt-6 mb-3 px-3.5 py-2 rounded-lg bg-gradient-to-r from-[#5B8DEF]/15 via-white/[0.02] to-transparent border-l-4 border-[#5B8DEF] flex items-center gap-2">
+                            <h2 className="text-[15px] font-bold font-clash text-white tracking-tight mt-6 mb-3 px-3.5 py-2 rounded-lg bg-white/[0.03] border-l-2 border-white flex items-center gap-2">
                               {children}
                             </h2>
                           ),
                           h3: ({ children }) => (
                             <h3 className="text-[13px] font-semibold font-clash text-[#E1E4EA] mt-4 mb-2 flex items-center gap-2">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#5EA977]" />
+                              <span className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
                               {children}
                             </h3>
                           ),
@@ -629,17 +638,17 @@ export default function ReportsPage() {
                           ),
                           li: ({ children }) => (
                             <li className="flex items-start gap-2 text-[12.5px] text-[#C1C5CD] leading-relaxed">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#5B8DEF] mt-2 flex-shrink-0" />
+                              <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 mt-2 flex-shrink-0" />
                               <div className="flex-1">{children}</div>
                             </li>
                           ),
                           blockquote: ({ children }) => (
-                            <blockquote className="border-l-4 border-[#A78BFA] bg-[#A78BFA]/10 rounded-r-xl px-4 py-3 my-3 text-[12px] text-[#E1E4EA] italic">
+                            <blockquote className="border-l-4 border-white/40 bg-white/[0.04] rounded-r-xl px-4 py-3 my-3 text-[12px] text-[#E1E4EA] italic">
                               {children}
                             </blockquote>
                           ),
                           code: ({ children }) => (
-                            <code className="px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono text-[#5EA977]">
+                            <code className="px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono text-white">
                               {children}
                             </code>
                           ),

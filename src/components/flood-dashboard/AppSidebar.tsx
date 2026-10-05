@@ -23,9 +23,9 @@ const navItems = [
 
 // City layer config for the ward controls
 const CITY_LAYERS = [
-  { key: 'mumbai' as const, label: 'Mumbai', color: '#3B82F6', wardCount: 24 },
-  { key: 'pune' as const, label: 'Pune', color: '#F59E0B', wardCount: 58 },
-  { key: 'navi_mumbai' as const, label: 'Navi Mumbai', color: '#10B981', wardCount: 111 },
+  { key: 'mumbai' as const, label: 'Mumbai', color: '#FFFFFF', wardCount: 24 },
+  { key: 'pune' as const, label: 'Pune', color: '#D4D4D8', wardCount: 58 },
+  { key: 'navi_mumbai' as const, label: 'Navi Mumbai', color: '#A1A1AA', wardCount: 111 },
 ];
 
 export default function AppSidebar() {
@@ -57,8 +57,8 @@ export default function AppSidebar() {
         <Link href="/" className="flex items-center gap-3 group">
           <Logo size={28} />
           <div>
-            <h1 className="text-[15px] font-bold font-clash text-white tracking-tight leading-tight group-hover:text-[#5EA977] transition-colors">Mumbai Flood</h1>
-            <p className="text-[9px] text-[#5EA977] uppercase tracking-[0.15em] font-mono font-semibold">Command Center</p>
+            <h1 className="text-[15px] font-bold font-clash text-white tracking-tight leading-tight group-hover:text-zinc-200 transition-colors">Mumbai Flood</h1>
+            <p className="text-[9px] text-zinc-400 uppercase tracking-[0.15em] font-mono font-semibold">Command Center</p>
           </div>
         </Link>
       </div>
@@ -106,7 +106,7 @@ export default function AppSidebar() {
                       : 'text-gray-400 hover:text-white hover:bg-white/5'
                   }`}
                 >
-                  <Icon size={16} className={wardsOpen && isOnMap ? 'text-[#5EA977]' : 'text-gray-400'} />
+                  <Icon size={16} className={wardsOpen && isOnMap ? 'text-white' : 'text-gray-400'} />
                   <span className="flex-1 text-left font-satoshi">{item.label}</span>
                   {wardsOpen ? (
                     <ChevronUp size={12} className="text-gray-400" />
@@ -157,24 +157,24 @@ export default function AppSidebar() {
                           </button>
                         ))}
 
-                        {/* Building layer: photogrammetry vs. analytical extrusions */}
+                        {/* Building layer: toggle ward-only 3D buildings on / off */}
                         <div className="border-t border-white/5 pt-1.5 mt-1">
                           <button
-                            onClick={() => setBuildingMode(buildingMode === 'photoreal' ? 'analytical' : 'photoreal')}
+                            onClick={() => setBuildingMode(buildingMode === 'analytical' ? 'off' : 'analytical')}
                             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all hover:bg-white/5"
                           >
-                            <Boxes size={12} className={buildingMode === 'analytical' ? 'text-[#5EA977]' : 'text-gray-500'} />
+                            <Boxes size={12} className={buildingMode === 'analytical' ? 'text-white' : 'text-gray-500'} />
                             <span className={`flex-1 text-left text-[11px] font-medium ${
                               buildingMode === 'analytical' ? 'text-white' : 'text-gray-400'
                             }`}>
-                              Buildings
+                              Ward Buildings
                             </span>
                             <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-mono ${
                               buildingMode === 'analytical'
-                                ? 'bg-[#5EA977]/15 text-[#5EA977]'
+                                ? 'bg-white/15 text-white'
                                 : 'bg-white/5 text-gray-500'
                             }`}>
-                              {buildingMode === 'analytical' ? 'ANALYTIC' : 'PHOTOREAL'}
+                              {buildingMode === 'analytical' ? 'ACTIVE' : 'OFF'}
                             </span>
                           </button>
                         </div>
@@ -185,7 +185,7 @@ export default function AppSidebar() {
                             onClick={toggleWardFillMode}
                             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all hover:bg-white/5"
                           >
-                            <Paintbrush size={12} className={wardFillMode ? 'text-[#5EA977]' : 'text-gray-500'} />
+                            <Paintbrush size={12} className={wardFillMode ? 'text-white' : 'text-gray-500'} />
                             <span className={`flex-1 text-left text-[11px] font-medium ${
                               wardFillMode ? 'text-white' : 'text-gray-400'
                             }`}>
@@ -193,7 +193,7 @@ export default function AppSidebar() {
                             </span>
                             <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-mono ${
                               wardFillMode 
-                                ? 'bg-[#5EA977]/15 text-[#5EA977]' 
+                                ? 'bg-white/15 text-white' 
                                 : 'bg-white/5 text-gray-500'
                             }`}>
                               {wardFillMode ? 'ON' : 'OFF'}
@@ -218,16 +218,16 @@ export default function AppSidebar() {
                   : 'text-gray-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Icon size={16} className={isActive ? 'text-[#5EA977]' : 'text-gray-400'} />
+              <Icon size={16} className={isActive ? 'text-white' : 'text-gray-400'} />
               <span className="flex-1 font-satoshi">{item.label}</span>
               {item.live && (
-                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-medium text-[#5EA977] bg-[#5EA977]/10 border border-[#5EA977]/20">
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-medium text-white bg-white/10 border border-white/20">
                   <Radio size={8} className="animate-pulse" />
                   Live
                 </span>
               )}
               {item.badgeCount && alertCount > 0 && (
-                <span className="min-w-[20px] h-[20px] rounded-full text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                <span className="min-w-[20px] h-[20px] rounded-full text-[10px] font-bold text-black bg-white border border-white flex items-center justify-center">
                   {alertCount}
                 </span>
               )}
@@ -284,10 +284,10 @@ export default function AppSidebar() {
                       </span>
                     </span>
                     {sev >= 3 && (
-                      <span className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] flex-shrink-0" />
+                      <span className="w-2 h-2 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)] flex-shrink-0" />
                     )}
                     {sev === 2 && (
-                      <span className="w-2 h-2 rounded-full bg-yellow-500 flex-shrink-0" />
+                      <span className="w-2 h-2 rounded-full bg-zinc-400 flex-shrink-0" />
                     )}
                   </Link>
                 );

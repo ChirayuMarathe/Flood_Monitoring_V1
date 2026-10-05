@@ -80,25 +80,25 @@ export default function CommandBar() {
         ) : (
           <span className="flex-1 text-[13px] text-[#525866]">Search or try command bar</span>
         )}
-        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono text-[#525866] bg-[#1A1E27] border border-[#242832]">
-          K
+        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono text-gray-400 bg-white/5 border border-white/10">
+          ⌘K
         </span>
       </div>
 
       {open && filtered.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 py-1 rounded-lg overflow-hidden z-50 bg-[#13161D] border border-[#242832] shadow-xl">
+        <div className="absolute top-full left-0 right-0 mt-2 py-1.5 rounded-xl overflow-hidden z-50 bg-black/95 backdrop-blur-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
           {filtered.slice(0, 8).map((ward) => (
             <button
               key={ward.id}
               onClick={() => handleSelect(ward.id)}
-              className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-[#1A1E27] transition-colors"
+              className="w-full flex items-center gap-3 px-3.5 py-2 text-left hover:bg-white/[0.06] transition-colors"
             >
-              <span className="w-6 h-6 rounded bg-[#1A1E27] flex items-center justify-center text-[9px] font-semibold text-[#8B919E] border border-[#242832]">
+              <span className="w-6 h-6 rounded bg-white/[0.05] flex items-center justify-center text-[9px] font-semibold text-gray-300 border border-white/10">
                 {ward.code.length > 3 ? ward.code.slice(0, 2) : ward.code}
               </span>
               <div className="flex-1 min-w-0">
-                <p className="text-[12px] text-[#C1C5CD] truncate">{ward.name}</p>
-                <p className="text-[10px] text-[#525866]">{ward.wardType} zone</p>
+                <p className="text-[12px] text-white truncate font-satoshi font-medium">{ward.name}</p>
+                <p className="text-[10px] text-gray-400 font-mono">{ward.wardType} zone</p>
               </div>
             </button>
           ))}

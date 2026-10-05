@@ -2,9 +2,10 @@ import { create } from 'zustand';
 import { mumbaiWards, timeSeriesData, type Ward, type TimeSeriesPoint } from '@/lib/mumbai-data';
 import { puneWards } from '@/lib/pune-data';
 import { naviMumbaiWards } from '@/lib/navi-mumbai-data';
-import type { WardRiskProfile, ClimateSnapshot, WardZonalStats, TrainingTableRow } from '@/lib/risk/WardRiskProfile';
+import { wardProfileKey, type WardRiskProfile, type ClimateSnapshot, type WardZonalStats, type TrainingTableRow } from '@/lib/risk/WardRiskProfile';
 import { computeRiskProfile } from '@/lib/risk/computeRiskProfile';
 import { loadWardZonalStats, loadTrainingTable, loadClimateTimeSeries, buildClimateIndex } from '@/lib/risk/dataLoader';
+import { getTimeSeriesForPeriod } from '@/lib/climate-service';
 
 export function getWardsForCity(city: 'mumbai' | 'pune' | 'navi_mumbai'): Ward[] {
   if (city === 'pune') return puneWards;
@@ -12,8 +13,8 @@ export function getWardsForCity(city: 'mumbai' | 'pune' | 'navi_mumbai'): Ward[]
   return mumbaiWards;
 }
 
-/** 'photoreal' = Google photogrammetry; 'analytical' = our risk-colorable extrusions. */
-export type BuildingMode = 'photoreal' | 'analytical';
+/** 'analytical' = ward-wise local 3D buildings; 'off' = hidden buildings. */
+export type BuildingMode = 'analytical' | 'off';
 
 export interface RAGMessage {
   id: string;
@@ -35,6 +36,13 @@ interface FloodState {
   selectedWardId: string | null;
   setSelectedWard: (id: string | null) => void;
   selectedWard: () => Ward | null;
+
+  // Multi-year and month timeline state
+  selectedYear: number;
+  selectedMonth: number | 'all' | 'monsoon';
+  activeTimeSeries: TimeSeriesPoint[];
+  setYear: (year: number) => void;
+  setMonth: (month: number | 'all' | 'monsoon') => void;
 
   timeIndex: number;
   setTimeIndex: (index: number) => void;
@@ -68,6 +76,7 @@ interface FloodState {
   setCriticalAlert: (visible: boolean) => void;
 
   ragPanelOpen: boolean;
+  setRAGPanelOpen: (open: boolean) => void;
   toggleRAGPanel: () => void;
 
   // Pinned wards for sidebar
@@ -103,8 +112,9 @@ interface FloodState {
   setSelectedBoundaryWard: (ward: { city: string; wardId: string; wardName: string; wardCode: string } | null) => void;
 }
 
-function computeSeverity(ward: Ward, timeIdx: number): number {
-  const td = timeSeriesData[timeIdx];
+function computeSeverity(ward: Ward, timeIdx: number, series: TimeSeriesPoint[]): number {
+  const td = series[timeIdx] || series[0];
+  if (!td) return 0;
   const rainFactor = Math.max(0, (td.rainfall_3day_sum - 70) / 230);
   const soilFactor = Math.max(0, (td.soil_moisture - 0.22) / 0.58);
   // Normalize elevation based on high altitude (Pune > 200m) vs coastal/estuarine lowlands
@@ -120,10 +130,12 @@ function computeSeverity(ward: Ward, timeIdx: number): number {
   return 0;
 }
 
+const initialTimeSeries = getTimeSeriesForPeriod(2024, 'monsoon');
+
 export const useFloodStore = create<FloodState>((set, get) => ({
   selectedWardId: null,
   setSelectedWard: (id) => {
-    set({ selectedWardId: id });
+    set({ selectedWardId: id, ...(id ? { ragPanelOpen: true } : {}) });
     if (id) {
       const wards = getWardsForCity(get().activeCity);
       const ward = wards.find((w) => w.id === id);
@@ -139,23 +151,50 @@ export const useFloodStore = create<FloodState>((set, get) => ({
     return wards.find((w) => w.id === selectedWardId) ?? null;
   },
 
-  timeIndex: 14,
-  setTimeIndex: (index) => {
-    set({ timeIndex: Math.max(0, Math.min(29, index)) });
+  // Multi-year and month timeline state
+  selectedYear: 2024,
+  selectedMonth: 'monsoon',
+  activeTimeSeries: initialTimeSeries,
+
+  setYear: (year: number) => {
+    const { selectedMonth, timeIndex } = get();
+    const newSeries = getTimeSeriesForPeriod(year, selectedMonth);
+    const newTimeIndex = Math.min(timeIndex, Math.max(0, newSeries.length - 1));
+    set({ selectedYear: year, activeTimeSeries: newSeries, timeIndex: newTimeIndex });
     get().updateSeverities();
     get().updateRiskProfiles();
   },
-  currentTimeData: () => timeSeriesData[get().timeIndex],
+
+  setMonth: (month: number | 'all' | 'monsoon') => {
+    const { selectedYear } = get();
+    const newSeries = getTimeSeriesForPeriod(selectedYear, month);
+    set({ selectedMonth: month, activeTimeSeries: newSeries, timeIndex: 0 });
+    get().updateSeverities();
+    get().updateRiskProfiles();
+  },
+
+  timeIndex: 38,
+  setTimeIndex: (index) => {
+    const series = get().activeTimeSeries;
+    const maxIdx = Math.max(0, series.length - 1);
+    set({ timeIndex: Math.max(0, Math.min(maxIdx, index)) });
+    get().updateSeverities();
+    get().updateRiskProfiles();
+  },
+  currentTimeData: () => {
+    const { activeTimeSeries, timeIndex } = get();
+    return activeTimeSeries[timeIndex] || activeTimeSeries[0] || timeSeriesData[0];
+  },
 
   wardSeverities: {},
   updateSeverities: () => {
-    const { timeIndex, selectedWardId, wardSeverities: oldSeverities, activeCity } = get();
+    const { timeIndex, selectedWardId, wardSeverities: oldSeverities, activeCity, activeTimeSeries } = get();
     const newSeverities: Record<string, number> = {};
     const newAlerts: AlertEvent[] = [];
 
     const wards = getWardsForCity(activeCity);
     wards.forEach((ward) => {
-      const newSev = computeSeverity(ward, timeIndex);
+      const newSev = computeSeverity(ward, timeIndex, activeTimeSeries);
       newSeverities[ward.id] = newSev;
 
       // Track severity changes for alert feed
@@ -234,9 +273,9 @@ export const useFloodStore = create<FloodState>((set, get) => ({
   },
 
   updateRiskProfiles: () => {
-    const { zonalStatsMap, trainingTable, timeIndex, activeCity } = get();
+    const { zonalStatsMap, trainingTable, timeIndex, activeCity, activeTimeSeries } = get();
 
-    const td = timeSeriesData[timeIndex];
+    const td = activeTimeSeries[timeIndex] || activeTimeSeries[0] || timeSeriesData[0];
     // City-calibrated precipitation and soil moisture:
     // Pune: Deccan rain shadow plateau (~0.62x coastal deluge)
     // Navi Mumbai: Konkan creek & wetland micro-climate (~1.04x)
@@ -247,6 +286,9 @@ export const useFloodStore = create<FloodState>((set, get) => ({
     const rain3Day = Math.round(td.rainfall_3day_sum * cityRainMultiplier);
     const soilMoisture = Math.min(0.95, Math.round(td.soil_moisture * citySoilMultiplier * 100) / 100);
 
+    const prevTd = timeIndex > 0 ? activeTimeSeries[timeIndex - 1] : null;
+    const nextTd = timeIndex < activeTimeSeries.length - 1 ? activeTimeSeries[timeIndex + 1] : null;
+
     const climate: ClimateSnapshot = {
       date: td.date || '2024-07-15',
       rainfallMm: rain3Day / 3,
@@ -254,8 +296,8 @@ export const useFloodStore = create<FloodState>((set, get) => ({
       landSurfaceTemp: td.land_surface_temp,
       rain2DaySum: rain3Day * 0.67,
       rain3DaySum: rain3Day,
-      rainPrevDay: timeIndex > 0 ? (timeSeriesData[timeIndex - 1].rainfall_3day_sum * cityRainMultiplier) / 3 : 0,
-      rainNextDay: timeIndex < 29 ? (timeSeriesData[timeIndex + 1].rainfall_3day_sum * cityRainMultiplier) / 3 : 0,
+      rainPrevDay: prevTd ? (prevTd.rainfall_3day_sum * cityRainMultiplier) / 3 : 0,
+      rainNextDay: nextTd ? (nextTd.rainfall_3day_sum * cityRainMultiplier) / 3 : 0,
       tideLevel: activeCity === 'pune' ? null : rain3Day > 115 ? 4.2 : 2.8,
       riverLevel: activeCity === 'pune' ? (rain3Day > 85 ? 3.8 : 1.5) : null,
     };
@@ -299,13 +341,19 @@ export const useFloodStore = create<FloodState>((set, get) => ({
         activeCity === 'mumbai' ? trainingTable : []
       );
       profiles[ward.id] = profile;
+      if (ward.code) profiles[ward.code] = profile;
+      if (ward.code) profiles[`mumbai_${ward.code}`] = profile;
+      profiles[`mumbai_${ward.id}`] = profile;
+      profiles[ward.name] = profile;
     });
 
     set({ wardRiskProfiles: profiles });
   },
 
   getWardRiskProfile: (wardId: string) => {
-    return get().wardRiskProfiles[wardId] || null;
+    const key = wardProfileKey(wardId);
+    const map = get().wardRiskProfiles;
+    return map[key] || map[wardId] || map[`mumbai_${wardId}`] || map[`mumbai_${key}`] || null;
   },
 
   rainfallMumbaiAvg: 156,
@@ -329,6 +377,7 @@ export const useFloodStore = create<FloodState>((set, get) => ({
   setCriticalAlert: (visible) => set({ criticalAlertVisible: visible }),
 
   ragPanelOpen: false,
+  setRAGPanelOpen: (open) => set({ ragPanelOpen: open }),
   toggleRAGPanel: () => set((s) => ({ ragPanelOpen: !s.ragPanelOpen })),
 
   pinnedWards: ['11', '10', '20', '4', '23'], // Default: critical/high-risk wards
@@ -368,7 +417,7 @@ export const useFloodStore = create<FloodState>((set, get) => ({
   wardFillMode: false,
   toggleWardFillMode: () => set((s) => ({ wardFillMode: !s.wardFillMode })),
 
-  buildingMode: 'photoreal',
+  buildingMode: 'analytical',
   setBuildingMode: (mode) => set({ buildingMode: mode }),
 
   // Selected boundary ward from map click

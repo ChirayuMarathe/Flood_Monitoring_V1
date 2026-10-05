@@ -20,17 +20,17 @@ export default function CriticalAlert() {
           className="absolute top-4 left-1/2 -translate-x-1/2 z-30"
           style={{ pointerEvents: 'auto' }}
         >
-          <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-[#1A1117] border border-[#D94444]/20">
-            <AlertTriangle size={16} className="text-[#D94444] flex-shrink-0" />
+          <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-black/95 border border-white/40 shadow-[0_0_30px_rgba(255,255,255,0.12)] backdrop-blur-xl">
+            <AlertTriangle size={16} className="text-white flex-shrink-0 animate-pulse" />
             <div className="flex-1">
-              <span className="text-[12px] font-semibold text-[#E1E4EA]">Critical Alert</span>
-              <span className="text-[11px] text-[#8B919E] ml-2">
-                {ward.name} — Water levels expected to exceed 1.5m
+              <span className="text-[12px] font-bold text-white font-clash">Critical Hazard Alert</span>
+              <span className="text-[11px] text-zinc-300 ml-2 font-satoshi">
+                {ward.name} — Water levels approaching critical threshold
               </span>
             </div>
             <button
               onClick={toggleRAGPanel}
-              className="px-2.5 py-1 rounded text-[10px] font-medium text-[#D94444] bg-[#D94444]/8 border border-[#D94444]/15 hover:bg-[#D94444]/12 transition-colors"
+              className="px-3 py-1 rounded-lg text-[10px] font-bold text-black bg-white hover:bg-zinc-200 transition-colors font-mono"
             >
               View Protocol
             </button>

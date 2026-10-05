@@ -56,47 +56,53 @@ export const CITY_CENTERS = {
  * The API route normalizer already injects ward_id, ward_name, ward_code, city
  * into the GeoJSON properties. This function reads those normalized fields.
  */
-export function extractNormalizedProperties(rawProps: Record<string, any>): NormalizedWardProperties {
-  return {
-    wardId: rawProps.ward_id || 'unknown',
-    wardName: rawProps.ward_name || 'Unknown Ward',
-    wardCode: rawProps.ward_code || '?',
-    city: rawProps.city || 'unknown',
-  };
+export function extractNormalizedProperties(rawProps: Record<string, any>, cityHint: string = 'mumbai'): NormalizedWardProperties {
+  if (rawProps?.ward_id && rawProps.ward_id !== 'unknown') {
+    return {
+      wardId: String(rawProps.ward_id),
+      wardName: String(rawProps.ward_name || rawProps.ward_id),
+      wardCode: String(rawProps.ward_code || rawProps.ward_id),
+      city: String(rawProps.city || cityHint),
+    };
+  }
+
+  return normalizeWardProperties(cityHint, rawProps);
 }
 
 /**
- * Legacy normalizer for backward compatibility with the old WardLayer code.
- * The new system uses the API route to pre-normalize, so this is rarely needed.
+ * Normalizer for raw and pre-normalized properties across Mumbai, Pune, and Navi Mumbai.
  */
 export function normalizeWardProperties(city: string, rawProperties: any): NormalizedWardProperties {
-  // If already normalized (from API route), just extract
-  if (rawProperties?.ward_id) {
-    return extractNormalizedProperties(rawProperties);
+  if (rawProperties?.ward_id && rawProperties.ward_id !== 'unknown') {
+    return {
+      wardId: String(rawProperties.ward_id),
+      wardName: String(rawProperties.ward_name || rawProperties.ward_id),
+      wardCode: String(rawProperties.ward_code || rawProperties.ward_id),
+      city: String(rawProperties.city || city),
+    };
   }
 
-  // Fallback: manual normalization (matches wardNormalizer.ts logic)
   let wardId: string;
   let wardCode: string;
   let wardName: string;
 
   switch (city.toLowerCase()) {
     case 'mumbai': {
-      const rawName = (rawProperties?.NAME2 || rawProperties?.name || 'Unknown').toString().trim();
+      const rawName = (rawProperties?.NAME2 || rawProperties?.Name || rawProperties?.ward || rawProperties?.WARD || rawProperties?.name || 'Unknown').toString().trim();
       wardCode = rawName;
       wardName = rawName;
-      wardId = `mumbai_${rawProperties?.OBJECTID || wardCode}`;
+      wardId = rawName; // Primary key matches canonical ward code (e.g. "T", "K/W", "A", "D")
       break;
     }
     case 'pune': {
-      const num = rawProperties?.wardnum || 0;
+      const num = rawProperties?.wardnum || rawProperties?.OBJECTID || 0;
       wardCode = num.toString().padStart(2, '0');
       wardName = (rawProperties?.Name2 || rawProperties?.Name1 || `Ward ${wardCode}`).toString().trim();
       wardId = `pune_${num}`;
       break;
     }
     case 'navi_mumbai': {
-      const code = (rawProperties?.sourcewardcode || '0').toString();
+      const code = (rawProperties?.sourcewardcode || rawProperties?.OBJECTID || '0').toString();
       wardCode = code;
       wardName = `Ward No.${code}`;
       wardId = `navi_mumbai_${code}`;

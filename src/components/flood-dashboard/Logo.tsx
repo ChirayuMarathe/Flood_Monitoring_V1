@@ -30,7 +30,7 @@ export function Logo({ size = 28 }: { size?: number }) {
       {/* Water wave line 1 */}
       <path
         d="M10 16C11.5 14 13 14 14.5 16C16 18 17.5 18 19 16C20.5 14 22 14 22 14"
-        stroke="#5B8DEF"
+        stroke="#FFFFFF"
         strokeWidth="1.5"
         strokeLinecap="round"
         fill="none"
@@ -39,26 +39,26 @@ export function Logo({ size = 28 }: { size?: number }) {
       {/* Water wave line 2 */}
       <path
         d="M10 20C11.5 18 13 18 14.5 20C16 22 17.5 22 19 20C20.5 18 22 18 22 18"
-        stroke="#5B8DEF"
+        stroke="#A1A1AA"
         strokeWidth="1.2"
         strokeLinecap="round"
         fill="none"
-        opacity="0.5"
+        opacity="0.6"
       />
       {/* Monitoring dot */}
       <circle
         cx="16"
         cy="11"
         r="2"
-        fill="#5B8DEF"
-        opacity="0.8"
+        fill="#FFFFFF"
+        opacity="0.9"
       />
       {/* Pulse ring */}
       <circle
         cx="16"
         cy="11"
         r="3.5"
-        stroke="#5B8DEF"
+        stroke="#FFFFFF"
         strokeWidth="0.5"
         fill="none"
         opacity="0.3"
@@ -91,12 +91,12 @@ export function LogoMark({ size = 20 }: { size?: number }) {
       />
       <path
         d="M7 12C8.5 10 10 10 11.5 12C13 14 14.5 14 16 12C17.5 10 17.5 10 17 10"
-        stroke="#5B8DEF"
+        stroke="#FFFFFF"
         strokeWidth="1.5"
         strokeLinecap="round"
         fill="none"
       />
-      <circle cx="12" cy="8" r="1.5" fill="#5B8DEF" opacity="0.7" />
+      <circle cx="12" cy="8" r="1.5" fill="#FFFFFF" opacity="0.8" />
     </svg>
   );
 }

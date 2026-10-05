@@ -17,7 +17,6 @@ const CesiumMapView = dynamic(() => import('@/components/flood-dashboard/CesiumM
 const BottomPanel = dynamic(() => import('@/components/flood-dashboard/BottomPanel'), { ssr: false });
 const WeatherWidget = dynamic(() => import('@/components/flood-dashboard/WeatherWidget'), { ssr: false });
 const CriticalAlert = dynamic(() => import('@/components/flood-dashboard/CriticalAlert'), { ssr: false });
-const WardInfoCard = dynamic(() => import('@/components/flood-dashboard/WardInfoCard'), { ssr: false });
 const RAGTerminal = dynamic(() => import('@/components/flood-dashboard/RAGTerminal'), { ssr: false });
 
 export default function MapPage() {
@@ -25,7 +24,6 @@ export default function MapPage() {
     <div className="w-full h-full relative overflow-hidden bg-[#0B0D12]">
       <CesiumMapView />
       <div className="absolute inset-0 z-10" style={{ pointerEvents: 'none' }}>
-        <WardInfoCard />
         <WeatherWidget />
         <BottomPanel />
         <RAGTerminal />

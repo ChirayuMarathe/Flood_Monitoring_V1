@@ -7,17 +7,17 @@ import { AlertTriangle, ArrowRight, TrendingUp, TrendingDown, Bell, ShieldAlert 
 import Link from 'next/link';
 
 const severityLabel: Record<number, { text: string; color: string }> = {
-  0: { text: 'Normal', color: 'text-emerald-400' },
-  1: { text: 'Watch', color: 'text-amber-400' },
-  2: { text: 'Elevated', color: 'text-orange-400' },
-  3: { text: 'Critical', color: 'text-red-400 font-bold' },
+  0: { text: 'Normal', color: 'text-zinc-400' },
+  1: { text: 'Watch', color: 'text-zinc-300' },
+  2: { text: 'Elevated', color: 'text-zinc-100' },
+  3: { text: 'Critical', color: 'text-white font-bold' },
 };
 
 export default function AlertsFeed() {
   const { alertHistory } = useFloodStore();
 
   return (
-    <div className="rounded-2xl overflow-hidden bg-[#0B0D14]/90 backdrop-blur-xl border border-white/10 shadow-[0_12px_32px_rgba(0,0,0,0.55)] flex flex-col">
+    <div className="rounded-2xl overflow-hidden bg-black/85 backdrop-blur-xl border border-white/10 shadow-[0_12px_32px_rgba(0,0,0,0.65)] flex flex-col">
       <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-white/[0.02]">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
@@ -32,7 +32,7 @@ export default function AlertsFeed() {
           <span className="text-[10px] text-gray-400 font-mono px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
             {alertHistory.length} events
           </span>
-          <Link href="/alerts" className="text-[10px] text-[#5EA977] hover:underline font-mono ml-1 font-semibold">
+          <Link href="/alerts" className="text-[10px] text-white hover:underline font-mono ml-1 font-semibold">
             View All →
           </Link>
         </div>
@@ -61,10 +61,10 @@ export default function AlertsFeed() {
                 >
                   <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 border ${
                     isCritical 
-                      ? 'bg-red-500/15 border-red-500/30 text-red-400 shadow-[0_0_12px_rgba(239,68,68,0.25)]' 
+                      ? 'bg-white border-white text-black shadow-[0_0_12px_rgba(255,255,255,0.4)]' 
                       : isEscalation 
-                      ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' 
-                      : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                      ? 'bg-white/[0.12] border-white/25 text-white' 
+                      : 'bg-white/[0.04] border-white/10 text-zinc-400'
                   }`}>
                     {isEscalation ? (
                       <TrendingUp size={13} className={isCritical ? 'animate-pulse' : ''} />

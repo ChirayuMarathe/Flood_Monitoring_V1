@@ -305,36 +305,33 @@ function generateBuildings(
   return buildings;
 }
 
-// Time series data for the slider (simulating 30 days of monsoon)
+// Time series data for the slider (122 real historical days from June 01 to September 30, 2024)
+import realMonsoonData from './real-monsoon-data.json';
+
 export interface TimeSeriesPoint {
   day: number;
   date: string;
   rainfall_3day_sum: number;
+  rainfall_daily?: number;
   soil_moisture: number;
   land_surface_temp: number;
 }
 
-export const timeSeriesData: TimeSeriesPoint[] = Array.from({ length: 30 }, (_, i) => ({
-  day: i + 1,
-  date: `2024-07-${String(i + 1).padStart(2, '0')}`,
-  rainfall_3day_sum: Math.round(50 + Math.sin(i * 0.4) * 80 + Math.random() * 60),
-  soil_moisture: Math.round((0.2 + Math.sin(i * 0.3) * 0.25 + Math.random() * 0.1) * 100) / 100,
-  land_surface_temp: Math.round((30 + Math.sin(i * 0.5) * 3 + Math.random() * 2) * 10) / 10,
-}));
+export const timeSeriesData: TimeSeriesPoint[] = realMonsoonData as TimeSeriesPoint[];
 
-// Severity color mapping
+// Pure monochrome high-contrast severity color mapping (shades of black, zinc, and white)
 export const severityColors: Record<number, { fill: string; stroke: string; label: string; bg: string }> = {
-  0: { fill: 'rgba(34, 197, 94, 0.3)', stroke: '#22c55e', label: 'No Risk', bg: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' },
-  1: { fill: 'rgba(234, 179, 8, 0.3)', stroke: '#eab308', label: 'Low', bg: 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400' },
-  2: { fill: 'rgba(249, 115, 22, 0.35)', stroke: '#f97316', label: 'Moderate', bg: 'bg-orange-500/10 border-orange-500/30 text-orange-400' },
-  3: { fill: 'rgba(239, 68, 68, 0.4)', stroke: '#ef4444', label: 'Critical', bg: 'bg-red-500/10 border-red-500/30 text-red-400' },
+  0: { fill: 'rgba(255, 255, 255, 0.05)', stroke: '#52525B', label: 'Nominal', bg: 'bg-white/[0.04] border-white/10 text-zinc-400' },
+  1: { fill: 'rgba(255, 255, 255, 0.12)', stroke: '#71717A', label: 'Watch', bg: 'bg-white/[0.08] border-white/15 text-zinc-300' },
+  2: { fill: 'rgba(255, 255, 255, 0.22)', stroke: '#A1A1AA', label: 'Elevated', bg: 'bg-white/[0.14] border-white/20 text-white' },
+  3: { fill: 'rgba(255, 255, 255, 0.40)', stroke: '#FFFFFF', label: 'Critical', bg: 'bg-white text-black border-white font-bold' },
 };
 
 export const severityColorHex: Record<number, string> = {
-  0: '#22c55e',
-  1: '#eab308',
-  2: '#f97316',
-  3: '#ef4444',
+  0: '#52525B',
+  1: '#71717A',
+  2: '#A1A1AA',
+  3: '#FFFFFF',
 };
 
 // Generate GeoJSON for all ward boundaries

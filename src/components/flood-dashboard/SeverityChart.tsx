@@ -6,10 +6,10 @@ import { useFloodStore, getWardsForCity } from '@/store/flood-store';
 import { ShieldCheck } from 'lucide-react';
 
 const severityMeta = [
-  { key: 0, label: 'Normal', color: '#10B981', gradId: 'gradNorm' },
-  { key: 1, label: 'Watch', color: '#F59E0B', gradId: 'gradWatch' },
-  { key: 2, label: 'Elevated', color: '#F97316', gradId: 'gradElev' },
-  { key: 3, label: 'Critical', color: '#EF4444', gradId: 'gradCrit' },
+  { key: 0, label: 'Nominal', color: '#52525B', gradId: 'gradNominal' },
+  { key: 1, label: 'Watch', color: '#71717A', gradId: 'gradWatch' },
+  { key: 2, label: 'Elevated', color: '#A1A1AA', gradId: 'gradElevated' },
+  { key: 3, label: 'Critical', color: '#FFFFFF', gradId: 'gradCritical' },
 ];
 
 export default function SeverityChart() {
@@ -24,11 +24,11 @@ export default function SeverityChart() {
   }));
 
   return (
-    <div className="p-5 rounded-2xl bg-[#0B0D14]/90 backdrop-blur-xl border border-white/10 shadow-[0_12px_32px_rgba(0,0,0,0.55)] flex flex-col justify-between">
+    <div className="p-5 rounded-2xl bg-black/85 backdrop-blur-xl border border-white/10 shadow-[0_12px_32px_rgba(0,0,0,0.65)] flex flex-col justify-between">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
-            <ShieldCheck size={13} className="text-[#10B981]" />
+            <ShieldCheck size={13} className="text-white" />
           </div>
           <div>
             <h3 className="text-[13px] font-bold font-clash text-white tracking-tight">Severity Distribution</h3>
@@ -44,21 +44,21 @@ export default function SeverityChart() {
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} barCategoryGap="28%" margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <defs>
-              <linearGradient id="gradNorm" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#10B981" stopOpacity={0.9} />
-                <stop offset="100%" stopColor="#059669" stopOpacity={0.3} />
+              <linearGradient id="gradNominal" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#71717A" stopOpacity={0.7} />
+                <stop offset="100%" stopColor="#3F3F46" stopOpacity={0.25} />
               </linearGradient>
               <linearGradient id="gradWatch" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.9} />
-                <stop offset="100%" stopColor="#D97706" stopOpacity={0.3} />
+                <stop offset="0%" stopColor="#A1A1AA" stopOpacity={0.8} />
+                <stop offset="100%" stopColor="#52525B" stopOpacity={0.3} />
               </linearGradient>
-              <linearGradient id="gradElev" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#F97316" stopOpacity={0.9} />
-                <stop offset="100%" stopColor="#EA580C" stopOpacity={0.3} />
+              <linearGradient id="gradElevated" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#D4D4D8" stopOpacity={0.9} />
+                <stop offset="100%" stopColor="#71717A" stopOpacity={0.35} />
               </linearGradient>
-              <linearGradient id="gradCrit" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#EF4444" stopOpacity={0.95} />
-                <stop offset="100%" stopColor="#DC2626" stopOpacity={0.4} />
+              <linearGradient id="gradCritical" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.98} />
+                <stop offset="100%" stopColor="#A1A1AA" stopOpacity={0.5} />
               </linearGradient>
             </defs>
             <XAxis
@@ -75,12 +75,12 @@ export default function SeverityChart() {
             />
             <Tooltip
               contentStyle={{
-                background: '#0D1017',
-                border: '1px solid rgba(255,255,255,0.15)',
+                background: '#090B10',
+                border: '1px solid rgba(255,255,255,0.12)',
                 borderRadius: '10px',
                 fontSize: '11px',
                 color: '#FFFFFF',
-                boxShadow: '0 10px 25px rgba(0,0,0,0.7)',
+                boxShadow: '0 10px 25px rgba(0,0,0,0.8)',
               }}
               cursor={{ fill: 'rgba(255,255,255,0.03)' }}
             />

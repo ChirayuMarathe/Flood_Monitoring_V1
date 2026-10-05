@@ -7,38 +7,50 @@ import { useFloodStore } from '@/store/flood-store';
 import { CloudRain } from 'lucide-react';
 
 export default function RainfallChart() {
-  const { timeIndex } = useFloodStore();
+  const { timeIndex, activeTimeSeries, selectedYear, selectedMonth } = useFloodStore();
+  const series = activeTimeSeries && activeTimeSeries.length > 0 ? activeTimeSeries : timeSeriesData;
 
-  const data = timeSeriesData.map((d, i) => ({
-    day: `Jul ${d.day}`,
-    rainfall: d.rainfall_3day_sum,
-    soilMoisture: Math.round(d.soil_moisture * 100),
-    isCurrent: i === timeIndex,
-  }));
+  const data = series.map((d, i) => {
+    // Format date string nicely e.g. "Jun 01", "Jul 09", "Sep 30"
+    const parsed = d.date ? new Date(d.date) : null;
+    const formatted = parsed && !isNaN(parsed.getTime())
+      ? parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      : `Day ${d.day}`;
 
-  const currentRain = timeSeriesData[timeIndex]?.rainfall_3day_sum ?? 0;
-  const currentSoil = Math.round((timeSeriesData[timeIndex]?.soil_moisture ?? 0) * 100);
+    return {
+      day: formatted,
+      fullDate: d.date,
+      rainfall: d.rainfall_3day_sum,
+      soilMoisture: Math.round(d.soil_moisture * 100),
+      isCurrent: i === timeIndex,
+    };
+  });
+
+  const currentRain = series[timeIndex]?.rainfall_3day_sum ?? 0;
+  const currentSoil = Math.round((series[timeIndex]?.soil_moisture ?? 0) * 100);
+
+  const periodLabel = selectedMonth === 'monsoon' ? 'Monsoon' : selectedMonth === 'all' ? 'Annual' : 'Month';
 
   return (
-    <div className="p-5 rounded-2xl bg-[#0B0D14]/90 backdrop-blur-xl border border-white/10 shadow-[0_12px_32px_rgba(0,0,0,0.55)] flex flex-col justify-between">
+    <div className="p-5 rounded-2xl bg-black/85 backdrop-blur-xl border border-white/10 shadow-[0_12px_32px_rgba(0,0,0,0.65)] flex flex-col justify-between">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-            <CloudRain size={13} className="text-[#06B6D4]" />
+          <div className="w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
+            <CloudRain size={13} className="text-white" />
           </div>
           <div>
             <h3 className="text-[13px] font-bold font-clash text-white tracking-tight">Rainfall & Soil Trend</h3>
-            <p className="text-[10px] text-gray-400 font-mono">30-Day Monsoon Window</p>
+            <p className="text-[10px] text-gray-400 font-mono">{selectedYear} · {periodLabel} ({series.length} Days)</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-[10px] font-mono text-cyan-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/[0.08] border border-white/20 text-[10px] font-mono text-white">
+            <span className="w-1.5 h-1.5 rounded-full bg-white" />
             <span>{currentRain} mm</span>
           </div>
-          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-[10px] font-mono text-purple-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/10 text-[10px] font-mono text-zinc-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
             <span>{currentSoil}% Soil</span>
           </div>
         </div>
@@ -49,12 +61,12 @@ export default function RainfallChart() {
           <AreaChart data={data} margin={{ top: 8, right: 8, left: -22, bottom: 0 }}>
             <defs>
               <linearGradient id="rainGradV2" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#06B6D4" stopOpacity={0.35} />
-                <stop offset="100%" stopColor="#06B6D4" stopOpacity={0.0} />
+                <stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.25} />
+                <stop offset="100%" stopColor="#FFFFFF" stopOpacity={0.0} />
               </linearGradient>
               <linearGradient id="soilGradV2" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#A855F7" stopOpacity={0.25} />
-                <stop offset="100%" stopColor="#A855F7" stopOpacity={0.0} />
+                <stop offset="0%" stopColor="#A1A1AA" stopOpacity={0.2} />
+                <stop offset="100%" stopColor="#A1A1AA" stopOpacity={0.0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
@@ -63,7 +75,7 @@ export default function RainfallChart() {
               axisLine={false}
               tickLine={false}
               tick={{ fill: '#8B919E', fontSize: 9, fontFamily: 'monospace' }}
-              interval={4}
+              interval={15}
             />
             <YAxis
               axisLine={false}
@@ -72,27 +84,27 @@ export default function RainfallChart() {
             />
             <Tooltip
               contentStyle={{
-                background: '#0D1017',
-                border: '1px solid rgba(255,255,255,0.15)',
+                background: '#050505',
+                border: '1px solid rgba(255,255,255,0.18)',
                 borderRadius: '10px',
                 fontSize: '11px',
                 color: '#FFFFFF',
-                boxShadow: '0 10px 25px rgba(0,0,0,0.7)',
+                boxShadow: '0 10px 25px rgba(0,0,0,0.9)',
               }}
             />
             <Area
               type="monotone"
               dataKey="rainfall"
               name="Rainfall (mm)"
-              stroke="#06B6D4"
-              strokeWidth={2}
+              stroke="#FFFFFF"
+              strokeWidth={1.8}
               fill="url(#rainGradV2)"
             />
             <Area
               type="monotone"
               dataKey="soilMoisture"
               name="Soil (%)"
-              stroke="#A855F7"
+              stroke="#71717A"
               strokeWidth={1.5}
               fill="url(#soilGradV2)"
             />

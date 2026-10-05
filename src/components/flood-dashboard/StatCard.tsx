@@ -19,51 +19,51 @@ export interface StatCardProps {
 
 const variantStyles = {
   default: {
-    accent: '#10B981',
-    glow: 'rgba(16, 185, 129, 0.15)',
-    border: 'border-white/10 hover:border-emerald-500/40',
-    badgeBg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25',
-    barBg: 'bg-gradient-to-r from-emerald-600 to-emerald-400',
+    accent: '#E4E4E7',
+    glow: 'rgba(255, 255, 255, 0.03)',
+    border: 'border-white/10 hover:border-white/20',
+    badgeBg: 'bg-white/[0.06] text-zinc-300 border-white/15',
+    barBg: 'bg-zinc-400',
     progressLabel: 'SECTOR READINESS',
   },
   critical: {
-    accent: '#EF4444',
-    glow: 'rgba(239, 68, 68, 0.22)',
-    border: 'border-red-500/30 hover:border-red-500/50 shadow-[0_0_25px_rgba(239,68,68,0.14)]',
-    badgeBg: 'bg-red-500/15 text-red-400 border-red-500/35',
-    barBg: 'bg-gradient-to-r from-red-600 via-rose-500 to-red-400',
+    accent: '#FFFFFF',
+    glow: 'rgba(255, 255, 255, 0.08)',
+    border: 'border-white/40 hover:border-white/60 shadow-[0_0_24px_rgba(255,255,255,0.06)]',
+    badgeBg: 'bg-white text-black font-bold border-white',
+    barBg: 'bg-white',
     progressLabel: 'EMERGENCY SEVERITY LOAD',
   },
   warning: {
-    accent: '#F59E0B',
-    glow: 'rgba(245, 158, 11, 0.16)',
-    border: 'border-amber-500/25 hover:border-amber-500/40',
-    badgeBg: 'bg-amber-500/10 text-amber-400 border-amber-500/25',
-    barBg: 'bg-gradient-to-r from-amber-600 to-amber-400',
+    accent: '#D4D4D8',
+    glow: 'rgba(255, 255, 255, 0.04)',
+    border: 'border-white/20 hover:border-white/30',
+    badgeBg: 'bg-white/[0.08] text-white border-white/20',
+    barBg: 'bg-zinc-300',
     progressLabel: 'WATCH THRESHOLD',
   },
   info: {
-    accent: '#3B82F6',
-    glow: 'rgba(59, 130, 246, 0.16)',
-    border: 'border-blue-500/25 hover:border-blue-500/40',
-    badgeBg: 'bg-blue-500/10 text-blue-400 border-blue-500/25',
-    barBg: 'bg-gradient-to-r from-blue-600 to-cyan-400',
+    accent: '#A1A1AA',
+    glow: 'rgba(255, 255, 255, 0.03)',
+    border: 'border-white/10 hover:border-white/20',
+    badgeBg: 'bg-white/[0.04] text-zinc-400 border-white/10',
+    barBg: 'bg-zinc-500',
     progressLabel: 'MONITORED COVERAGE',
   },
   rain: {
-    accent: '#06B6D4',
-    glow: 'rgba(6, 182, 212, 0.18)',
-    border: 'border-cyan-500/25 hover:border-cyan-500/40',
-    badgeBg: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/25',
-    barBg: 'bg-gradient-to-r from-blue-600 via-cyan-500 to-teal-400',
+    accent: '#F4F4F5',
+    glow: 'rgba(255, 255, 255, 0.05)',
+    border: 'border-white/15 hover:border-white/25',
+    badgeBg: 'bg-white/[0.07] text-white border-white/20',
+    barBg: 'bg-zinc-200',
     progressLabel: 'PRECIPITATION CAPACITY',
   },
   soil: {
-    accent: '#A855F7',
-    glow: 'rgba(168, 85, 247, 0.18)',
-    border: 'border-purple-500/25 hover:border-purple-500/40',
-    badgeBg: 'bg-purple-500/10 text-purple-400 border-purple-500/25',
-    barBg: 'bg-gradient-to-r from-indigo-500 via-purple-500 to-fuchsia-400',
+    accent: '#71717A',
+    glow: 'rgba(255, 255, 255, 0.02)',
+    border: 'border-white/10 hover:border-white/20',
+    badgeBg: 'bg-white/[0.05] text-zinc-300 border-white/15',
+    barBg: 'bg-zinc-400',
     progressLabel: 'SOIL SATURATION INDEX',
   },
 };
@@ -85,11 +85,11 @@ export default function StatCard({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl bg-[#0B0D14]/90 backdrop-blur-xl p-5 border transition-all duration-300 shadow-[0_12px_32px_rgba(0,0,0,0.55),inset_0_1px_1px_rgba(255,255,255,0.06)] hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(0,0,0,0.7)] group ${style.border}`}
+      className={`relative overflow-hidden rounded-2xl bg-black/85 backdrop-blur-xl p-5 border transition-all duration-300 shadow-[0_12px_32px_rgba(0,0,0,0.65),inset_0_1px_1px_rgba(255,255,255,0.06)] hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(0,0,0,0.8)] group ${style.border}`}
     >
       {/* Dynamic ambient radial glow */}
       <div
-        className="pointer-events-none absolute -top-14 -right-14 h-40 w-40 rounded-full blur-3xl transition-opacity duration-500 group-hover:opacity-100 opacity-60"
+        className="pointer-events-none absolute -top-14 -right-14 h-40 w-40 rounded-full blur-3xl transition-opacity duration-500 group-hover:opacity-100 opacity-40"
         style={{ background: style.glow }}
       />
 
@@ -117,8 +117,8 @@ export default function StatCard({
             className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold border backdrop-blur-md ${style.badgeBg}`}
           >
             <span
-              className={`h-1.5 w-1.5 rounded-full ${isCritical ? 'bg-red-400 animate-ping' : ''}`}
-              style={{ backgroundColor: !isCritical ? style.accent : undefined }}
+              className={`h-1.5 w-1.5 rounded-full ${isCritical ? 'bg-white animate-ping' : ''}`}
+              style={{ backgroundColor: !isCritical ? style.accent : '#FFFFFF' }}
             />
             {trendValue}
           </span>

@@ -25,6 +25,8 @@ import {
   BoundingSphere,
   Cartographic,
   Math as CesiumMath,
+  ClassificationType,
+  PolylineGraphics,
 } from 'cesium';
 import { CITY_COLORS, extractNormalizedProperties, type NormalizedWardProperties } from './WardData';
 import { HazardPins } from './HazardPins';
@@ -45,11 +47,67 @@ const LABEL_THRESHOLDS = {
 interface CityLayerData {
   dataSource: GeoJsonDataSource;
   labelEntities: Entity[];
+  lineEntities: Entity[];
   visible: boolean;
   entityMaterials: Map<string, { fill: ColorMaterialProperty; outline: Color }>;
 }
 
+/** High-speed 2D Ramer-Douglas-Peucker simplification for terrain outlines and clipping masks */
+function simplifyRing2D(pts: number[][], tolerance: number = 0.00015): number[][] {
+  if (pts.length <= 4) return pts;
 
+  function getSqSegDist(p: number[], p1: number[], p2: number[]) {
+    let x = p1[0], y = p1[1], dx = p2[0] - x, dy = p2[1] - y;
+    if (dx !== 0 || dy !== 0) {
+      const t = ((p[0] - x) * dx + (p[1] - y) * dy) / (dx * dx + dy * dy);
+      if (t > 1) {
+        x = p2[0]; y = p2[1];
+      } else if (t > 0) {
+        x += dx * t; y += dy * t;
+      }
+    }
+    dx = p[0] - x; dy = p[1] - y;
+    return dx * dx + dy * dy;
+  }
+
+  const sqTol = tolerance * tolerance;
+  const last = pts.length - 1;
+  const simplified: number[][] = [pts[0]];
+
+  function step(first: number, lastIdx: number) {
+    let maxSq = sqTol;
+    let index = -1;
+    for (let i = first + 1; i < lastIdx; i++) {
+      const sq = getSqSegDist(pts[i], pts[first], pts[lastIdx]);
+      if (sq > maxSq) {
+        index = i;
+        maxSq = sq;
+      }
+    }
+    if (maxSq > sqTol) {
+      if (index - first > 1) step(first, index);
+      simplified.push(pts[index]);
+      if (lastIdx - index > 1) step(index, lastIdx);
+    }
+  }
+
+  step(0, last);
+  simplified.push(pts[last]);
+  return simplified;
+}
+
+/** Enforces Counter-Clockwise winding order required by Cesium ClippingPolygon */
+function ensureCounterClockwiseRing(ring: number[][]): number[][] {
+  let area = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    area += (ring[i + 1][0] - ring[i][0]) * (ring[i + 1][1] + ring[i][1]);
+  }
+  // In geographic (lng, lat): positive area indicates clockwise, negative indicates counter-clockwise
+  if (area > 0) {
+    return [...ring].reverse();
+  }
+  return ring;
+}
 
 export class WardLayer {
   private viewer: Viewer;
@@ -59,6 +117,9 @@ export class WardLayer {
   private fillMode: boolean = false;
   private loadingPromise: Promise<void> | null = null;
   private hazardPins: HazardPins;
+  private wardPolygonEntities: Map<string, Entity> = new Map();
+  private wardBoundaryPositions: Map<string, Cartesian3[]> = new Map();
+  private wardLineEntities: Map<string, Entity[]> = new Map();
 
   constructor(viewer: Viewer) {
     this.viewer = viewer;
@@ -68,6 +129,20 @@ export class WardLayer {
   public destroy() {
     this.removeAll();
     this.hazardPins.destroy();
+  }
+
+  /**
+   * Retrieves the outer boundary Cartesian3 positions of a specific ward for 3D tileset clipping.
+   */
+  public getWardBoundaryPositions(wardId: string): Cartesian3[] | null {
+    if (!wardId) return null;
+    return (
+      this.wardBoundaryPositions.get(wardId) ||
+      this.wardBoundaryPositions.get(wardProfileKey(wardId)) ||
+      this.wardBoundaryPositions.get(`mumbai_${wardId}`) ||
+      this.wardBoundaryPositions.get(`mumbai_${wardProfileKey(wardId)}`) ||
+      null
+    );
   }
 
   /**
@@ -113,21 +188,114 @@ export class WardLayer {
     }
     const geojson = await response.json();
 
-    // Log the normalization info from headers (API route only)
     if (!isRemoteEnabled) {
       console.log(`[WardLayer] ${city} — wards: ${response.headers.get('X-Ward-Count')}, coords fixed: ${response.headers.get('X-Coords-Fixed')}, simplified: ${response.headers.get('X-Simplified')}`);
     } else {
       console.log(`[WardLayer] ${city} — loaded from ${source}`);
     }
 
-    // Load into Cesium GeoJsonDataSource
+    // 1. Build clamped-to-ground vector polyline outlines directly on Cesium terrain
+    // This guarantees 100% visible, razor-sharp ward administrative boundaries regardless of elevation.
+    const features = geojson.features || [];
+    const lineEntities: Entity[] = [];
+
+    for (const feature of features) {
+      const rawProps = feature.properties || {};
+      const normalized = extractNormalizedProperties(rawProps);
+      const geom = feature.geometry;
+      if (!geom) continue;
+
+      let rings: number[][][] = [];
+      if (geom.type === 'Polygon') {
+        rings = geom.coordinates;
+      } else if (geom.type === 'MultiPolygon') {
+        for (const poly of geom.coordinates) {
+          if (poly && poly.length > 0) rings.push(poly[0]);
+        }
+      }
+
+      if (rings.length > 0) {
+        const outerRing = rings[0];
+        // Simplify outer ring and ensure Counter-Clockwise order for Cesium ClippingPolygon
+        const simplifiedOuter = simplifyRing2D(outerRing, 0.00015);
+        const ccwOuter = ensureCounterClockwiseRing(simplifiedOuter);
+        const flatOuter: number[] = [];
+        for (const pt of ccwOuter) {
+          flatOuter.push(pt[0], pt[1]);
+        }
+        if (flatOuter.length >= 6) {
+          const cartPositions = Cartesian3.fromDegreesArray(flatOuter);
+          this.wardBoundaryPositions.set(normalized.wardId, cartPositions);
+          if (normalized.wardCode) {
+            this.wardBoundaryPositions.set(normalized.wardCode, cartPositions);
+            this.wardBoundaryPositions.set(`mumbai_${normalized.wardCode}`, cartPositions);
+          }
+          const bare = wardProfileKey(normalized.wardId);
+          if (bare) this.wardBoundaryPositions.set(bare, cartPositions);
+        }
+
+        // Add clamped vector polyline for each boundary ring with simplified geometry
+        for (const ring of rings) {
+          const simplified = simplifyRing2D(ring, 0.00015);
+          const flatRing: number[] = [];
+          for (const pt of simplified) {
+            flatRing.push(pt[0], pt[1]);
+          }
+          if (flatRing.length >= 6) {
+            // Close ring if open
+            if (simplified[0][0] !== simplified[simplified.length - 1][0] || simplified[0][1] !== simplified[simplified.length - 1][1]) {
+              flatRing.push(simplified[0][0], simplified[0][1]);
+            }
+
+            const outlineColor = Color.fromCssColorString('rgba(255, 255, 255, 0.70)');
+            const lineEntity = this.viewer.entities.add({
+              polyline: {
+                positions: Cartesian3.fromDegreesArray(flatRing),
+                width: 2.0,
+                material: outlineColor,
+                clampToGround: true,
+              },
+              properties: {
+                isWardBoundaryLine: true,
+                wardId: normalized.wardId,
+                wardCode: normalized.wardCode,
+                city: city,
+              } as any,
+            });
+
+            lineEntities.push(lineEntity);
+
+            if (!this.wardLineEntities.has(normalized.wardId)) {
+              this.wardLineEntities.set(normalized.wardId, []);
+            }
+            this.wardLineEntities.get(normalized.wardId)!.push(lineEntity);
+
+            if (normalized.wardCode) {
+              if (!this.wardLineEntities.has(normalized.wardCode)) {
+                this.wardLineEntities.set(normalized.wardCode, []);
+              }
+              this.wardLineEntities.get(normalized.wardCode)!.push(lineEntity);
+              if (!this.wardLineEntities.has(`mumbai_${normalized.wardCode}`)) {
+                this.wardLineEntities.set(`mumbai_${normalized.wardCode}`, []);
+              }
+              this.wardLineEntities.get(`mumbai_${normalized.wardCode}`)!.push(lineEntity);
+            }
+
+            const bareKey = wardProfileKey(normalized.wardId);
+            if (bareKey && !this.wardLineEntities.has(bareKey)) {
+              this.wardLineEntities.set(bareKey, this.wardLineEntities.get(normalized.wardId)!);
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Load into Cesium GeoJsonDataSource for ground polygons and hover/click interactivity
     const dataSource = new GeoJsonDataSource(`wards_${city}`);
     await dataSource.load(geojson, {
       clampToGround: true,
     });
 
-    // Get city color config
-    const colors = CITY_COLORS[city];
     const entityMaterials = new Map<string, { fill: ColorMaterialProperty; outline: Color }>();
 
     // Style each entity and create labels
@@ -146,21 +314,25 @@ export class WardLayer {
         entity.properties.addProperty('normalizedCity', normalized.city);
       }
 
-      // Style the polygon
+      // Style the polygon with sleek frosted obsidian fill
       if (entity.polygon) {
-        const outlineColor = new Color(colors.outline.r, colors.outline.g, colors.outline.b, colors.outline.a);
-        // Use alpha=0.01 instead of 0 to ensure proper terrain draping
-        const fillColor = new Color(colors.fill.r, colors.fill.g, colors.fill.b, colors.fill.a);
+        const outlineColor = Color.fromCssColorString('rgba(255, 255, 255, 0.70)');
+        const fillColor = Color.fromCssColorString('rgba(255, 255, 255, 0.08)');
         const fillMaterial = new ColorMaterialProperty(fillColor);
 
         entity.polygon.material = fillMaterial;
-        entity.polygon.height = new ConstantProperty(0); // Fix for outline warning on terrain
-        entity.polygon.perPositionHeight = new ConstantProperty(false); // Drop perPositionHeight to avoid conflict with height
-        entity.polygon.outline = new ConstantProperty(true);
-        entity.polygon.outlineColor = new ConstantProperty(outlineColor);
-        entity.polygon.outlineWidth = new ConstantProperty(2);
+        entity.polygon.classificationType = new ConstantProperty(ClassificationType.BOTH);
+        entity.polygon.height = undefined as any;
+        entity.polygon.perPositionHeight = undefined as any;
 
         entityMaterials.set(normalized.wardId, { fill: fillMaterial, outline: outlineColor });
+        this.wardPolygonEntities.set(normalized.wardId, entity);
+        if (normalized.wardCode) {
+          this.wardPolygonEntities.set(normalized.wardCode, entity);
+          this.wardPolygonEntities.set(`mumbai_${normalized.wardCode}`, entity);
+        }
+        const bare = wardProfileKey(normalized.wardId);
+        if (bare) this.wardPolygonEntities.set(bare, entity);
       }
 
       // Create centroid label
@@ -169,7 +341,6 @@ export class WardLayer {
         const thresholds = LABEL_THRESHOLDS[city];
         const labelEntity = this.viewer.entities.add({
           position: centroid,
-          // Billboard is handled by HazardPins in updateFromProfiles
           label: {
             text: normalized.wardCode,
             font: city === 'navi_mumbai' ? '11px sans-serif' : '13px sans-serif',
@@ -181,18 +352,15 @@ export class WardLayer {
             horizontalOrigin: HorizontalOrigin.CENTER,
             heightReference: HeightReference.CLAMP_TO_GROUND,
             disableDepthTestDistance: Number.POSITIVE_INFINITY,
-            // Zoom-dependent scaling
             scaleByDistance: new NearFarScalar(1000, 1.0, thresholds.showCode, 0.0),
-            // Fade out at distance
             translucencyByDistance: new NearFarScalar(
               thresholds.showName,
               1.0,
               thresholds.showCode,
               0.0
             ),
-            // Completely stop rendering beyond threshold (perf optimization)
             distanceDisplayCondition: new DistanceDisplayCondition(0, thresholds.showCode),
-            pixelOffset: new Cartesian2(0, -45), // Push label above the pin
+            pixelOffset: new Cartesian2(0, -45),
           },
           properties: {
             wardLayerLabel: true,
@@ -212,6 +380,7 @@ export class WardLayer {
     this.cityLayers.set(city, {
       dataSource,
       labelEntities,
+      lineEntities,
       visible: true,
       entityMaterials,
     });
@@ -257,9 +426,11 @@ export class WardLayer {
     layer.visible = visible;
     layer.dataSource.show = visible;
 
-    // Toggle labels
     for (const labelEntity of layer.labelEntities) {
       labelEntity.show = visible;
+    }
+    for (const lineEntity of layer.lineEntities) {
+      lineEntity.show = visible;
     }
   }
 
@@ -276,25 +447,59 @@ export class WardLayer {
   }
 
   /**
-   * Update the hazard pins for all wards from their computed risk profiles.
+   * Update the real ward polygon boundaries for all wards from their computed risk profiles.
+   * Eliminates the cylindrical circles and colors the actual administrative boundaries.
    */
   updateFromProfiles(profiles: Record<string, WardRiskProfile>): void {
-    for (const city of ALL_CITIES) {
-      const layer = this.cityLayers.get(city);
-      if (!layer) continue;
-      
+    // 1. Ensure all cylinder ellipses are removed from centroid label entities
+    for (const layer of this.cityLayers.values()) {
       for (const labelEntity of layer.labelEntities) {
-        if (!labelEntity.properties) continue;
-        const wardId = labelEntity.properties.getValue(this.viewer.clock.currentTime)?.normalizedWardId;
-        if (!wardId) continue;
-        
-        const profile = profiles[wardProfileKey(wardId)];
-        if (!profile) continue;
+        if (labelEntity.ellipse) {
+          labelEntity.ellipse = undefined;
+        }
+      }
+    }
 
-        if (!labelEntity.ellipse) {
-          this.hazardPins.setupAlert(labelEntity, profile, LABEL_THRESHOLDS[city]);
-        } else {
-          this.hazardPins.updateAlert(labelEntity, profile);
+    // 2. Dynamically style the ACTUAL WARD BOUNDARY POLYGONS & VECTOR POLYLINES
+    for (const [wardKey, entity] of this.wardPolygonEntities.entries()) {
+      if (!entity.polygon) continue;
+      const profile =
+        profiles[wardKey] ||
+        profiles[wardProfileKey(wardKey)] ||
+        profiles[`mumbai_${wardKey}`] ||
+        profiles[`mumbai_${wardProfileKey(wardKey)}`];
+      const sev = profile ? profile.overallSeverity : 0;
+
+      // Vivid, high-visibility flood risk zone styling so zones are clearly visible across the map
+      const fillColor =
+        sev === 3 ? Color.fromCssColorString('rgba(239, 68, 68, 0.42)') :   // Critical: Crimson Alert Zone
+        sev === 2 ? Color.fromCssColorString('rgba(245, 158, 11, 0.32)') :  // High: Amber Warning Zone
+        sev === 1 ? Color.fromCssColorString('rgba(59, 130, 246, 0.22)') :  // Moderate: Tactical Blue Zone
+                    Color.fromCssColorString('rgba(16, 185, 129, 0.10)');   // Low: Calm Emerald Glass
+
+      const outlineColor =
+        sev === 3 ? Color.fromCssColorString('#EF4444') :
+        sev === 2 ? Color.fromCssColorString('#F59E0B') :
+        sev === 1 ? Color.fromCssColorString('#3B82F6') :
+                    Color.fromCssColorString('rgba(255, 255, 255, 0.55)');
+
+      const outlineWidth = sev === 3 ? 3.5 : sev === 2 ? 2.8 : 2.0;
+
+      if (!this.selectedEntity || this.selectedEntity !== entity) {
+        entity.polygon.material = new ColorMaterialProperty(fillColor);
+      }
+
+      // Update vector polylines for crisp terrain outlines
+      const lines =
+        this.wardLineEntities.get(wardKey) ||
+        this.wardLineEntities.get(wardProfileKey(wardKey)) ||
+        this.wardLineEntities.get(`mumbai_${wardKey}`);
+      if (lines) {
+        for (const line of lines) {
+          if (line.polyline) {
+            line.polyline.material = new ColorMaterialProperty(outlineColor);
+            line.polyline.width = new ConstantProperty(outlineWidth);
+          }
         }
       }
     }
@@ -375,13 +580,19 @@ export class WardLayer {
     if (!entity.polygon) return null;
 
     const originalMaterial = entity.polygon.material;
-    const time = this.viewer.clock.currentTime;
-    const city = entity.properties?.normalizedCity?.getValue(time) as CityKey;
+    const info = this.getWardInfo(entity);
+    entity.polygon.material = new ColorMaterialProperty(Color.fromCssColorString('rgba(255, 255, 255, 0.22)'));
 
-    if (city && CITY_COLORS[city]) {
-      const hc = CITY_COLORS[city].highlight;
-      entity.polygon.material = new ColorMaterialProperty(new Color(hc.r, hc.g, hc.b, hc.a));
-      entity.polygon.outlineWidth = new ConstantProperty(3);
+    if (info) {
+      const lines = this.wardLineEntities.get(info.wardId) || (info.wardCode ? this.wardLineEntities.get(info.wardCode) : null);
+      if (lines) {
+        for (const line of lines) {
+          if (line.polyline) {
+            line.polyline.material = new ColorMaterialProperty(Color.WHITE);
+            line.polyline.width = new ConstantProperty(3.5);
+          }
+        }
+      }
     }
 
     return originalMaterial;
@@ -394,7 +605,18 @@ export class WardLayer {
     if (!entity.polygon || !originalMaterial) return;
 
     entity.polygon.material = originalMaterial;
-    entity.polygon.outlineWidth = new ConstantProperty(2);
+    const info = this.getWardInfo(entity);
+    if (info && (!this.selectedEntity || this.selectedEntity !== entity)) {
+      const lines = this.wardLineEntities.get(info.wardId) || (info.wardCode ? this.wardLineEntities.get(info.wardCode) : null);
+      if (lines) {
+        for (const line of lines) {
+          if (line.polyline) {
+            line.polyline.material = new ColorMaterialProperty(Color.fromCssColorString('rgba(255, 255, 255, 0.70)'));
+            line.polyline.width = new ConstantProperty(2.0);
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -411,12 +633,17 @@ export class WardLayer {
     this.selectedEntity = entity;
     this.selectedMaterial = entity.polygon.material;
 
-    // Apply selection highlight (brighter than hover)
-    const city = info.city as CityKey;
-    if (CITY_COLORS[city]) {
-      const hc = CITY_COLORS[city].highlight;
-      entity.polygon.material = new ColorMaterialProperty(new Color(hc.r, hc.g, hc.b, hc.a + 0.15));
-      entity.polygon.outlineWidth = new ConstantProperty(4);
+    // Apply high-contrast frosted selection highlight
+    entity.polygon.material = new ColorMaterialProperty(Color.fromCssColorString('rgba(255, 255, 255, 0.38)'));
+
+    const lines = this.wardLineEntities.get(info.wardId) || (info.wardCode ? this.wardLineEntities.get(info.wardCode) : null);
+    if (lines) {
+      for (const line of lines) {
+        if (line.polyline) {
+          line.polyline.material = new ColorMaterialProperty(Color.WHITE);
+          line.polyline.width = new ConstantProperty(4.5);
+        }
+      }
     }
 
     return info;
@@ -446,12 +673,9 @@ export class WardLayer {
    * The new API keeps all cities loaded but toggles visibility.
    */
   async loadCityWards(city: CityKey): Promise<void> {
-    // If all cities aren't loaded yet, load them
     if (this.cityLayers.size === 0) {
       await this.loadAllCities();
     }
-
-    // Show the requested city, keep others as they are
     this.setCityVisible(city, true);
   }
 
@@ -465,6 +689,9 @@ export class WardLayer {
     this.viewer.dataSources.remove(layer.dataSource, true);
     for (const labelEntity of layer.labelEntities) {
       this.viewer.entities.remove(labelEntity);
+    }
+    for (const lineEntity of layer.lineEntities) {
+      this.viewer.entities.remove(lineEntity);
     }
     this.cityLayers.delete(city);
   }

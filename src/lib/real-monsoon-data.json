@@ -1,0 +1,978 @@
+[
+  {
+    "day": 1,
+    "date": "2024-06-01",
+    "rainfall_3day_sum": 0.0,
+    "rainfall_daily": 0.0,
+    "soil_moisture": 0.128,
+    "land_surface_temp": 37.7
+  },
+  {
+    "day": 2,
+    "date": "2024-06-02",
+    "rainfall_3day_sum": 0.0,
+    "rainfall_daily": 0.0,
+    "soil_moisture": 0.127,
+    "land_surface_temp": 37.6
+  },
+  {
+    "day": 3,
+    "date": "2024-06-03",
+    "rainfall_3day_sum": 0.0,
+    "rainfall_daily": 0.0,
+    "soil_moisture": 0.131,
+    "land_surface_temp": 35.8
+  },
+  {
+    "day": 4,
+    "date": "2024-06-04",
+    "rainfall_3day_sum": 5.2,
+    "rainfall_daily": 5.2,
+    "soil_moisture": 0.135,
+    "land_surface_temp": 35.7
+  },
+  {
+    "day": 5,
+    "date": "2024-06-05",
+    "rainfall_3day_sum": 5.7,
+    "rainfall_daily": 0.5,
+    "soil_moisture": 0.147,
+    "land_surface_temp": 35.0
+  },
+  {
+    "day": 6,
+    "date": "2024-06-06",
+    "rainfall_3day_sum": 6.3,
+    "rainfall_daily": 0.6,
+    "soil_moisture": 0.16,
+    "land_surface_temp": 35.1
+  },
+  {
+    "day": 7,
+    "date": "2024-06-07",
+    "rainfall_3day_sum": 1.8,
+    "rainfall_daily": 0.7,
+    "soil_moisture": 0.161,
+    "land_surface_temp": 33.8
+  },
+  {
+    "day": 8,
+    "date": "2024-06-08",
+    "rainfall_3day_sum": 7.2,
+    "rainfall_daily": 5.9,
+    "soil_moisture": 0.15,
+    "land_surface_temp": 35.6
+  },
+  {
+    "day": 9,
+    "date": "2024-06-09",
+    "rainfall_3day_sum": 20.7,
+    "rainfall_daily": 14.1,
+    "soil_moisture": 0.213,
+    "land_surface_temp": 32.7
+  },
+  {
+    "day": 10,
+    "date": "2024-06-10",
+    "rainfall_3day_sum": 92.0,
+    "rainfall_daily": 72.0,
+    "soil_moisture": 0.338,
+    "land_surface_temp": 30.4
+  },
+  {
+    "day": 11,
+    "date": "2024-06-11",
+    "rainfall_3day_sum": 96.2,
+    "rainfall_daily": 10.2,
+    "soil_moisture": 0.359,
+    "land_surface_temp": 29.3
+  },
+  {
+    "day": 12,
+    "date": "2024-06-12",
+    "rainfall_3day_sum": 104.9,
+    "rainfall_daily": 22.7,
+    "soil_moisture": 0.377,
+    "land_surface_temp": 29.4
+  },
+  {
+    "day": 13,
+    "date": "2024-06-13",
+    "rainfall_3day_sum": 33.9,
+    "rainfall_daily": 1.0,
+    "soil_moisture": 0.382,
+    "land_surface_temp": 29.8
+  },
+  {
+    "day": 14,
+    "date": "2024-06-14",
+    "rainfall_3day_sum": 42.4,
+    "rainfall_daily": 18.6,
+    "soil_moisture": 0.351,
+    "land_surface_temp": 30.4
+  },
+  {
+    "day": 15,
+    "date": "2024-06-15",
+    "rainfall_3day_sum": 24.2,
+    "rainfall_daily": 4.5,
+    "soil_moisture": 0.341,
+    "land_surface_temp": 30.5
+  },
+  {
+    "day": 16,
+    "date": "2024-06-16",
+    "rainfall_3day_sum": 23.1,
+    "rainfall_daily": 0.0,
+    "soil_moisture": 0.324,
+    "land_surface_temp": 32.1
+  },
+  {
+    "day": 17,
+    "date": "2024-06-17",
+    "rainfall_3day_sum": 5.3,
+    "rainfall_daily": 0.8,
+    "soil_moisture": 0.369,
+    "land_surface_temp": 29.9
+  },
+  {
+    "day": 18,
+    "date": "2024-06-18",
+    "rainfall_3day_sum": 8.8,
+    "rainfall_daily": 8.1,
+    "soil_moisture": 0.391,
+    "land_surface_temp": 29.0
+  },
+  {
+    "day": 19,
+    "date": "2024-06-19",
+    "rainfall_3day_sum": 30.4,
+    "rainfall_daily": 21.6,
+    "soil_moisture": 0.407,
+    "land_surface_temp": 26.8
+  },
+  {
+    "day": 20,
+    "date": "2024-06-20",
+    "rainfall_3day_sum": 54.9,
+    "rainfall_daily": 25.3,
+    "soil_moisture": 0.392,
+    "land_surface_temp": 29.5
+  },
+  {
+    "day": 21,
+    "date": "2024-06-21",
+    "rainfall_3day_sum": 85.1,
+    "rainfall_daily": 38.3,
+    "soil_moisture": 0.376,
+    "land_surface_temp": 30.3
+  },
+  {
+    "day": 22,
+    "date": "2024-06-22",
+    "rainfall_3day_sum": 99.2,
+    "rainfall_daily": 35.7,
+    "soil_moisture": 0.367,
+    "land_surface_temp": 30.8
+  },
+  {
+    "day": 23,
+    "date": "2024-06-23",
+    "rainfall_3day_sum": 87.0,
+    "rainfall_daily": 13.1,
+    "soil_moisture": 0.387,
+    "land_surface_temp": 28.7
+  },
+  {
+    "day": 24,
+    "date": "2024-06-24",
+    "rainfall_3day_sum": 55.9,
+    "rainfall_daily": 7.2,
+    "soil_moisture": 0.378,
+    "land_surface_temp": 30.1
+  },
+  {
+    "day": 25,
+    "date": "2024-06-25",
+    "rainfall_3day_sum": 20.3,
+    "rainfall_daily": 0.1,
+    "soil_moisture": 0.406,
+    "land_surface_temp": 29.6
+  },
+  {
+    "day": 26,
+    "date": "2024-06-26",
+    "rainfall_3day_sum": 13.4,
+    "rainfall_daily": 6.2,
+    "soil_moisture": 0.409,
+    "land_surface_temp": 28.7
+  },
+  {
+    "day": 27,
+    "date": "2024-06-27",
+    "rainfall_3day_sum": 29.7,
+    "rainfall_daily": 23.4,
+    "soil_moisture": 0.429,
+    "land_surface_temp": 27.2
+  },
+  {
+    "day": 28,
+    "date": "2024-06-28",
+    "rainfall_3day_sum": 96.2,
+    "rainfall_daily": 66.7,
+    "soil_moisture": 0.407,
+    "land_surface_temp": 27.4
+  },
+  {
+    "day": 29,
+    "date": "2024-06-29",
+    "rainfall_3day_sum": 143.2,
+    "rainfall_daily": 53.1,
+    "soil_moisture": 0.401,
+    "land_surface_temp": 27.9
+  },
+  {
+    "day": 30,
+    "date": "2024-06-30",
+    "rainfall_3day_sum": 142.2,
+    "rainfall_daily": 22.4,
+    "soil_moisture": 0.396,
+    "land_surface_temp": 28.5
+  },
+  {
+    "day": 31,
+    "date": "2024-07-01",
+    "rainfall_3day_sum": 99.2,
+    "rainfall_daily": 23.6,
+    "soil_moisture": 0.406,
+    "land_surface_temp": 27.6
+  },
+  {
+    "day": 32,
+    "date": "2024-07-02",
+    "rainfall_3day_sum": 82.8,
+    "rainfall_daily": 36.8,
+    "soil_moisture": 0.395,
+    "land_surface_temp": 28.5
+  },
+  {
+    "day": 33,
+    "date": "2024-07-03",
+    "rainfall_3day_sum": 65.0,
+    "rainfall_daily": 4.6,
+    "soil_moisture": 0.394,
+    "land_surface_temp": 30.1
+  },
+  {
+    "day": 34,
+    "date": "2024-07-04",
+    "rainfall_3day_sum": 47.1,
+    "rainfall_daily": 5.7,
+    "soil_moisture": 0.391,
+    "land_surface_temp": 29.1
+  },
+  {
+    "day": 35,
+    "date": "2024-07-05",
+    "rainfall_3day_sum": 26.5,
+    "rainfall_daily": 16.2,
+    "soil_moisture": 0.391,
+    "land_surface_temp": 28.4
+  },
+  {
+    "day": 36,
+    "date": "2024-07-06",
+    "rainfall_3day_sum": 45.1,
+    "rainfall_daily": 23.2,
+    "soil_moisture": 0.403,
+    "land_surface_temp": 27.7
+  },
+  {
+    "day": 37,
+    "date": "2024-07-07",
+    "rainfall_3day_sum": 97.2,
+    "rainfall_daily": 57.8,
+    "soil_moisture": 0.386,
+    "land_surface_temp": 28.1
+  },
+  {
+    "day": 38,
+    "date": "2024-07-08",
+    "rainfall_3day_sum": 186.4,
+    "rainfall_daily": 105.3,
+    "soil_moisture": 0.406,
+    "land_surface_temp": 26.3
+  },
+  {
+    "day": 39,
+    "date": "2024-07-09",
+    "rainfall_3day_sum": 269.6,
+    "rainfall_daily": 106.4,
+    "soil_moisture": 0.414,
+    "land_surface_temp": 26.3
+  },
+  {
+    "day": 40,
+    "date": "2024-07-10",
+    "rainfall_3day_sum": 225.1,
+    "rainfall_daily": 13.4,
+    "soil_moisture": 0.403,
+    "land_surface_temp": 29.1
+  },
+  {
+    "day": 41,
+    "date": "2024-07-11",
+    "rainfall_3day_sum": 145.3,
+    "rainfall_daily": 25.5,
+    "soil_moisture": 0.408,
+    "land_surface_temp": 26.7
+  },
+  {
+    "day": 42,
+    "date": "2024-07-12",
+    "rainfall_3day_sum": 101.9,
+    "rainfall_daily": 63.1,
+    "soil_moisture": 0.413,
+    "land_surface_temp": 25.8
+  },
+  {
+    "day": 43,
+    "date": "2024-07-13",
+    "rainfall_3day_sum": 142.6,
+    "rainfall_daily": 54.0,
+    "soil_moisture": 0.419,
+    "land_surface_temp": 25.6
+  },
+  {
+    "day": 44,
+    "date": "2024-07-14",
+    "rainfall_3day_sum": 249.9,
+    "rainfall_daily": 132.8,
+    "soil_moisture": 0.414,
+    "land_surface_temp": 25.7
+  },
+  {
+    "day": 45,
+    "date": "2024-07-15",
+    "rainfall_3day_sum": 238.0,
+    "rainfall_daily": 51.2,
+    "soil_moisture": 0.409,
+    "land_surface_temp": 26.2
+  },
+  {
+    "day": 46,
+    "date": "2024-07-16",
+    "rainfall_3day_sum": 205.1,
+    "rainfall_daily": 21.0,
+    "soil_moisture": 0.416,
+    "land_surface_temp": 27.9
+  },
+  {
+    "day": 47,
+    "date": "2024-07-17",
+    "rainfall_3day_sum": 76.2,
+    "rainfall_daily": 4.0,
+    "soil_moisture": 0.414,
+    "land_surface_temp": 26.6
+  },
+  {
+    "day": 48,
+    "date": "2024-07-18",
+    "rainfall_3day_sum": 70.4,
+    "rainfall_daily": 45.4,
+    "soil_moisture": 0.411,
+    "land_surface_temp": 26.3
+  },
+  {
+    "day": 49,
+    "date": "2024-07-19",
+    "rainfall_3day_sum": 112.2,
+    "rainfall_daily": 62.8,
+    "soil_moisture": 0.399,
+    "land_surface_temp": 26.1
+  },
+  {
+    "day": 50,
+    "date": "2024-07-20",
+    "rainfall_3day_sum": 189.6,
+    "rainfall_daily": 81.4,
+    "soil_moisture": 0.411,
+    "land_surface_temp": 25.8
+  },
+  {
+    "day": 51,
+    "date": "2024-07-21",
+    "rainfall_3day_sum": 216.1,
+    "rainfall_daily": 71.9,
+    "soil_moisture": 0.413,
+    "land_surface_temp": 26.0
+  },
+  {
+    "day": 52,
+    "date": "2024-07-22",
+    "rainfall_3day_sum": 264.8,
+    "rainfall_daily": 111.6,
+    "soil_moisture": 0.413,
+    "land_surface_temp": 25.6
+  },
+  {
+    "day": 53,
+    "date": "2024-07-23",
+    "rainfall_3day_sum": 263.8,
+    "rainfall_daily": 80.4,
+    "soil_moisture": 0.417,
+    "land_surface_temp": 25.3
+  },
+  {
+    "day": 54,
+    "date": "2024-07-24",
+    "rainfall_3day_sum": 241.0,
+    "rainfall_daily": 49.1,
+    "soil_moisture": 0.402,
+    "land_surface_temp": 25.8
+  },
+  {
+    "day": 55,
+    "date": "2024-07-25",
+    "rainfall_3day_sum": 228.7,
+    "rainfall_daily": 99.3,
+    "soil_moisture": 0.401,
+    "land_surface_temp": 24.8
+  },
+  {
+    "day": 56,
+    "date": "2024-07-26",
+    "rainfall_3day_sum": 238.1,
+    "rainfall_daily": 89.8,
+    "soil_moisture": 0.392,
+    "land_surface_temp": 26.8
+  },
+  {
+    "day": 57,
+    "date": "2024-07-27",
+    "rainfall_3day_sum": 194.3,
+    "rainfall_daily": 5.2,
+    "soil_moisture": 0.393,
+    "land_surface_temp": 26.8
+  },
+  {
+    "day": 58,
+    "date": "2024-07-28",
+    "rainfall_3day_sum": 107.1,
+    "rainfall_daily": 12.1,
+    "soil_moisture": 0.416,
+    "land_surface_temp": 26.0
+  },
+  {
+    "day": 59,
+    "date": "2024-07-29",
+    "rainfall_3day_sum": 27.2,
+    "rainfall_daily": 9.8,
+    "soil_moisture": 0.407,
+    "land_surface_temp": 26.2
+  },
+  {
+    "day": 60,
+    "date": "2024-07-30",
+    "rainfall_3day_sum": 45.7,
+    "rainfall_daily": 23.8,
+    "soil_moisture": 0.399,
+    "land_surface_temp": 27.7
+  },
+  {
+    "day": 61,
+    "date": "2024-07-31",
+    "rainfall_3day_sum": 59.2,
+    "rainfall_daily": 25.6,
+    "soil_moisture": 0.396,
+    "land_surface_temp": 26.6
+  },
+  {
+    "day": 62,
+    "date": "2024-08-01",
+    "rainfall_3day_sum": 61.1,
+    "rainfall_daily": 11.7,
+    "soil_moisture": 0.392,
+    "land_surface_temp": 28.3
+  },
+  {
+    "day": 63,
+    "date": "2024-08-02",
+    "rainfall_3day_sum": 64.9,
+    "rainfall_daily": 27.6,
+    "soil_moisture": 0.413,
+    "land_surface_temp": 26.4
+  },
+  {
+    "day": 64,
+    "date": "2024-08-03",
+    "rainfall_3day_sum": 58.4,
+    "rainfall_daily": 19.1,
+    "soil_moisture": 0.425,
+    "land_surface_temp": 25.4
+  },
+  {
+    "day": 65,
+    "date": "2024-08-04",
+    "rainfall_3day_sum": 145.1,
+    "rainfall_daily": 98.4,
+    "soil_moisture": 0.416,
+    "land_surface_temp": 25.8
+  },
+  {
+    "day": 66,
+    "date": "2024-08-05",
+    "rainfall_3day_sum": 133.8,
+    "rainfall_daily": 16.2,
+    "soil_moisture": 0.391,
+    "land_surface_temp": 28.9
+  },
+  {
+    "day": 67,
+    "date": "2024-08-06",
+    "rainfall_3day_sum": 126.4,
+    "rainfall_daily": 11.7,
+    "soil_moisture": 0.388,
+    "land_surface_temp": 28.6
+  },
+  {
+    "day": 68,
+    "date": "2024-08-07",
+    "rainfall_3day_sum": 44.7,
+    "rainfall_daily": 16.8,
+    "soil_moisture": 0.384,
+    "land_surface_temp": 29.0
+  },
+  {
+    "day": 69,
+    "date": "2024-08-08",
+    "rainfall_3day_sum": 32.6,
+    "rainfall_daily": 4.1,
+    "soil_moisture": 0.373,
+    "land_surface_temp": 28.5
+  },
+  {
+    "day": 70,
+    "date": "2024-08-09",
+    "rainfall_3day_sum": 29.5,
+    "rainfall_daily": 8.7,
+    "soil_moisture": 0.378,
+    "land_surface_temp": 27.6
+  },
+  {
+    "day": 71,
+    "date": "2024-08-10",
+    "rainfall_3day_sum": 17.0,
+    "rainfall_daily": 4.2,
+    "soil_moisture": 0.387,
+    "land_surface_temp": 28.6
+  },
+  {
+    "day": 72,
+    "date": "2024-08-11",
+    "rainfall_3day_sum": 20.3,
+    "rainfall_daily": 7.4,
+    "soil_moisture": 0.371,
+    "land_surface_temp": 29.0
+  },
+  {
+    "day": 73,
+    "date": "2024-08-12",
+    "rainfall_3day_sum": 19.4,
+    "rainfall_daily": 7.8,
+    "soil_moisture": 0.376,
+    "land_surface_temp": 28.7
+  },
+  {
+    "day": 74,
+    "date": "2024-08-13",
+    "rainfall_3day_sum": 17.6,
+    "rainfall_daily": 2.5,
+    "soil_moisture": 0.363,
+    "land_surface_temp": 30.0
+  },
+  {
+    "day": 75,
+    "date": "2024-08-14",
+    "rainfall_3day_sum": 10.5,
+    "rainfall_daily": 0.3,
+    "soil_moisture": 0.349,
+    "land_surface_temp": 30.2
+  },
+  {
+    "day": 76,
+    "date": "2024-08-15",
+    "rainfall_3day_sum": 4.6,
+    "rainfall_daily": 1.9,
+    "soil_moisture": 0.345,
+    "land_surface_temp": 30.2
+  },
+  {
+    "day": 77,
+    "date": "2024-08-16",
+    "rainfall_3day_sum": 2.2,
+    "rainfall_daily": 0.1,
+    "soil_moisture": 0.337,
+    "land_surface_temp": 30.2
+  },
+  {
+    "day": 78,
+    "date": "2024-08-17",
+    "rainfall_3day_sum": 3.1,
+    "rainfall_daily": 1.2,
+    "soil_moisture": 0.327,
+    "land_surface_temp": 30.0
+  },
+  {
+    "day": 79,
+    "date": "2024-08-18",
+    "rainfall_3day_sum": 5.3,
+    "rainfall_daily": 4.0,
+    "soil_moisture": 0.322,
+    "land_surface_temp": 29.4
+  },
+  {
+    "day": 80,
+    "date": "2024-08-19",
+    "rainfall_3day_sum": 5.2,
+    "rainfall_daily": 0.0,
+    "soil_moisture": 0.375,
+    "land_surface_temp": 28.6
+  },
+  {
+    "day": 81,
+    "date": "2024-08-20",
+    "rainfall_3day_sum": 5.9,
+    "rainfall_daily": 1.9,
+    "soil_moisture": 0.369,
+    "land_surface_temp": 29.2
+  },
+  {
+    "day": 82,
+    "date": "2024-08-21",
+    "rainfall_3day_sum": 8.5,
+    "rainfall_daily": 6.7,
+    "soil_moisture": 0.347,
+    "land_surface_temp": 30.0
+  },
+  {
+    "day": 83,
+    "date": "2024-08-22",
+    "rainfall_3day_sum": 9.2,
+    "rainfall_daily": 0.7,
+    "soil_moisture": 0.376,
+    "land_surface_temp": 29.3
+  },
+  {
+    "day": 84,
+    "date": "2024-08-23",
+    "rainfall_3day_sum": 8.4,
+    "rainfall_daily": 1.1,
+    "soil_moisture": 0.407,
+    "land_surface_temp": 27.7
+  },
+  {
+    "day": 85,
+    "date": "2024-08-24",
+    "rainfall_3day_sum": 25.8,
+    "rainfall_daily": 24.0,
+    "soil_moisture": 0.411,
+    "land_surface_temp": 25.7
+  },
+  {
+    "day": 86,
+    "date": "2024-08-25",
+    "rainfall_3day_sum": 101.8,
+    "rainfall_daily": 76.6,
+    "soil_moisture": 0.4,
+    "land_surface_temp": 25.8
+  },
+  {
+    "day": 87,
+    "date": "2024-08-26",
+    "rainfall_3day_sum": 129.1,
+    "rainfall_daily": 28.4,
+    "soil_moisture": 0.409,
+    "land_surface_temp": 26.3
+  },
+  {
+    "day": 88,
+    "date": "2024-08-27",
+    "rainfall_3day_sum": 121.3,
+    "rainfall_daily": 16.3,
+    "soil_moisture": 0.406,
+    "land_surface_temp": 26.4
+  },
+  {
+    "day": 89,
+    "date": "2024-08-28",
+    "rainfall_3day_sum": 67.3,
+    "rainfall_daily": 22.6,
+    "soil_moisture": 0.391,
+    "land_surface_temp": 28.0
+  },
+  {
+    "day": 90,
+    "date": "2024-08-29",
+    "rainfall_3day_sum": 61.3,
+    "rainfall_daily": 22.4,
+    "soil_moisture": 0.379,
+    "land_surface_temp": 27.6
+  },
+  {
+    "day": 91,
+    "date": "2024-08-30",
+    "rainfall_3day_sum": 50.7,
+    "rainfall_daily": 5.7,
+    "soil_moisture": 0.377,
+    "land_surface_temp": 29.0
+  },
+  {
+    "day": 92,
+    "date": "2024-08-31",
+    "rainfall_3day_sum": 34.7,
+    "rainfall_daily": 6.7,
+    "soil_moisture": 0.373,
+    "land_surface_temp": 29.0
+  },
+  {
+    "day": 93,
+    "date": "2024-09-01",
+    "rainfall_3day_sum": 14.9,
+    "rainfall_daily": 2.6,
+    "soil_moisture": 0.367,
+    "land_surface_temp": 27.0
+  },
+  {
+    "day": 94,
+    "date": "2024-09-02",
+    "rainfall_3day_sum": 10.2,
+    "rainfall_daily": 1.0,
+    "soil_moisture": 0.424,
+    "land_surface_temp": 25.4
+  },
+  {
+    "day": 95,
+    "date": "2024-09-03",
+    "rainfall_3day_sum": 20.3,
+    "rainfall_daily": 16.8,
+    "soil_moisture": 0.404,
+    "land_surface_temp": 26.2
+  },
+  {
+    "day": 96,
+    "date": "2024-09-04",
+    "rainfall_3day_sum": 35.2,
+    "rainfall_daily": 17.4,
+    "soil_moisture": 0.397,
+    "land_surface_temp": 27.7
+  },
+  {
+    "day": 97,
+    "date": "2024-09-05",
+    "rainfall_3day_sum": 62.3,
+    "rainfall_daily": 28.1,
+    "soil_moisture": 0.399,
+    "land_surface_temp": 27.0
+  },
+  {
+    "day": 98,
+    "date": "2024-09-06",
+    "rainfall_3day_sum": 65.7,
+    "rainfall_daily": 20.1,
+    "soil_moisture": 0.406,
+    "land_surface_temp": 27.5
+  },
+  {
+    "day": 99,
+    "date": "2024-09-07",
+    "rainfall_3day_sum": 60.5,
+    "rainfall_daily": 12.3,
+    "soil_moisture": 0.389,
+    "land_surface_temp": 28.5
+  },
+  {
+    "day": 100,
+    "date": "2024-09-08",
+    "rainfall_3day_sum": 42.3,
+    "rainfall_daily": 9.9,
+    "soil_moisture": 0.376,
+    "land_surface_temp": 29.2
+  },
+  {
+    "day": 101,
+    "date": "2024-09-09",
+    "rainfall_3day_sum": 23.7,
+    "rainfall_daily": 1.5,
+    "soil_moisture": 0.38,
+    "land_surface_temp": 28.2
+  },
+  {
+    "day": 102,
+    "date": "2024-09-10",
+    "rainfall_3day_sum": 25.0,
+    "rainfall_daily": 13.6,
+    "soil_moisture": 0.377,
+    "land_surface_temp": 28.4
+  },
+  {
+    "day": 103,
+    "date": "2024-09-11",
+    "rainfall_3day_sum": 20.6,
+    "rainfall_daily": 5.6,
+    "soil_moisture": 0.383,
+    "land_surface_temp": 27.5
+  },
+  {
+    "day": 104,
+    "date": "2024-09-12",
+    "rainfall_3day_sum": 33.4,
+    "rainfall_daily": 14.3,
+    "soil_moisture": 0.376,
+    "land_surface_temp": 28.5
+  },
+  {
+    "day": 105,
+    "date": "2024-09-13",
+    "rainfall_3day_sum": 27.9,
+    "rainfall_daily": 8.1,
+    "soil_moisture": 0.364,
+    "land_surface_temp": 28.5
+  },
+  {
+    "day": 106,
+    "date": "2024-09-14",
+    "rainfall_3day_sum": 25.4,
+    "rainfall_daily": 3.1,
+    "soil_moisture": 0.368,
+    "land_surface_temp": 27.9
+  },
+  {
+    "day": 107,
+    "date": "2024-09-15",
+    "rainfall_3day_sum": 28.3,
+    "rainfall_daily": 17.2,
+    "soil_moisture": 0.363,
+    "land_surface_temp": 28.7
+  },
+  {
+    "day": 108,
+    "date": "2024-09-16",
+    "rainfall_3day_sum": 41.8,
+    "rainfall_daily": 21.6,
+    "soil_moisture": 0.365,
+    "land_surface_temp": 28.4
+  },
+  {
+    "day": 109,
+    "date": "2024-09-17",
+    "rainfall_3day_sum": 41.9,
+    "rainfall_daily": 3.1,
+    "soil_moisture": 0.358,
+    "land_surface_temp": 28.5
+  },
+  {
+    "day": 110,
+    "date": "2024-09-18",
+    "rainfall_3day_sum": 27.3,
+    "rainfall_daily": 2.7,
+    "soil_moisture": 0.346,
+    "land_surface_temp": 29.0
+  },
+  {
+    "day": 111,
+    "date": "2024-09-19",
+    "rainfall_3day_sum": 6.0,
+    "rainfall_daily": 0.2,
+    "soil_moisture": 0.338,
+    "land_surface_temp": 28.5
+  },
+  {
+    "day": 112,
+    "date": "2024-09-20",
+    "rainfall_3day_sum": 2.9,
+    "rainfall_daily": 0.0,
+    "soil_moisture": 0.328,
+    "land_surface_temp": 29.2
+  },
+  {
+    "day": 113,
+    "date": "2024-09-21",
+    "rainfall_3day_sum": 0.2,
+    "rainfall_daily": 0.0,
+    "soil_moisture": 0.329,
+    "land_surface_temp": 28.8
+  },
+  {
+    "day": 114,
+    "date": "2024-09-22",
+    "rainfall_3day_sum": 0.3,
+    "rainfall_daily": 0.3,
+    "soil_moisture": 0.337,
+    "land_surface_temp": 28.8
+  },
+  {
+    "day": 115,
+    "date": "2024-09-23",
+    "rainfall_3day_sum": 6.6,
+    "rainfall_daily": 6.3,
+    "soil_moisture": 0.37,
+    "land_surface_temp": 28.8
+  },
+  {
+    "day": 116,
+    "date": "2024-09-24",
+    "rainfall_3day_sum": 63.3,
+    "rainfall_daily": 56.7,
+    "soil_moisture": 0.399,
+    "land_surface_temp": 27.0
+  },
+  {
+    "day": 117,
+    "date": "2024-09-25",
+    "rainfall_3day_sum": 105.0,
+    "rainfall_daily": 42.0,
+    "soil_moisture": 0.422,
+    "land_surface_temp": 25.8
+  },
+  {
+    "day": 118,
+    "date": "2024-09-26",
+    "rainfall_3day_sum": 203.9,
+    "rainfall_daily": 105.2,
+    "soil_moisture": 0.419,
+    "land_surface_temp": 25.6
+  },
+  {
+    "day": 119,
+    "date": "2024-09-27",
+    "rainfall_3day_sum": 198.1,
+    "rainfall_daily": 50.9,
+    "soil_moisture": 0.429,
+    "land_surface_temp": 24.7
+  },
+  {
+    "day": 120,
+    "date": "2024-09-28",
+    "rainfall_3day_sum": 197.7,
+    "rainfall_daily": 41.6,
+    "soil_moisture": 0.398,
+    "land_surface_temp": 26.7
+  },
+  {
+    "day": 121,
+    "date": "2024-09-29",
+    "rainfall_3day_sum": 109.6,
+    "rainfall_daily": 17.1,
+    "soil_moisture": 0.373,
+    "land_surface_temp": 29.0
+  },
+  {
+    "day": 122,
+    "date": "2024-09-30",
+    "rainfall_3day_sum": 59.2,
+    "rainfall_daily": 0.5,
+    "soil_moisture": 0.356,
+    "land_surface_temp": 29.9
+  }
+]

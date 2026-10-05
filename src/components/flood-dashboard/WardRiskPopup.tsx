@@ -7,9 +7,10 @@ import { severityColors } from '@/lib/mumbai-data';
 
 interface WardRiskPopupProps {
   profile: WardRiskProfile;
-  onClose: () => void;
+  onClose?: () => void;
   onRequestAIExplanation: () => void;
   isLoadingAI?: boolean;
+  variant?: 'floating' | 'docked';
 }
 
 const hazardTypeLabel = (type: HazardType) => {
@@ -36,17 +37,17 @@ const HazardIcon = ({ type }: { type: HazardType }) => {
 };
 
 const SEVERITY_BADGES: Record<0 | 1 | 2 | 3, { label: string; badge: string; dot: string }> = {
-  0: { label: 'Minimal Risk', badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', dot: 'bg-emerald-400' },
-  1: { label: 'Low Risk', badge: 'bg-amber-500/10 text-amber-400 border-amber-500/20', dot: 'bg-amber-400' },
-  2: { label: 'Moderate Risk', badge: 'bg-orange-500/10 text-orange-400 border-orange-500/20', dot: 'bg-orange-400' },
-  3: { label: 'Critical Risk', badge: 'bg-red-500/15 text-red-400 border-red-500/30', dot: 'bg-red-400 animate-ping' },
+  0: { label: 'Nominal Risk', badge: 'bg-white/[0.04] text-zinc-400 border-white/10', dot: 'bg-zinc-600' },
+  1: { label: 'Watch Risk', badge: 'bg-white/[0.08] text-zinc-200 border-white/15', dot: 'bg-zinc-400' },
+  2: { label: 'Elevated Risk', badge: 'bg-white/[0.14] text-white border-white/25', dot: 'bg-zinc-200' },
+  3: { label: 'Critical Risk', badge: 'bg-white text-black font-bold border-white shadow-[0_0_12px_rgba(255,255,255,0.4)]', dot: 'bg-black animate-ping' },
 };
 
 const ContributionBar = ({ value, severity }: { value: number; severity: 0 | 1 | 2 | 3 }) => {
   const barColor = 
-    severity === 3 ? 'bg-red-500' :
-    severity === 2 ? 'bg-orange-500' :
-    severity === 1 ? 'bg-amber-500' : 'bg-emerald-500';
+    severity === 3 ? 'bg-white' :
+    severity === 2 ? 'bg-zinc-300' :
+    severity === 1 ? 'bg-zinc-400' : 'bg-zinc-500';
 
   return (
     <div className="w-full h-1 bg-white/10 rounded-full mt-2 overflow-hidden">
@@ -58,11 +59,26 @@ const ContributionBar = ({ value, severity }: { value: number; severity: 0 | 1 |
   );
 };
 
-export function WardRiskPopup({ profile, onClose, onRequestAIExplanation, isLoadingAI }: WardRiskPopupProps) {
+export function WardRiskPopup({ 
+  profile, 
+  onClose, 
+  onRequestAIExplanation, 
+  isLoadingAI,
+  variant = 'floating' 
+}: WardRiskPopupProps) {
   const sevInfo = SEVERITY_BADGES[profile.overallSeverity] || SEVERITY_BADGES[0];
+  const isDocked = variant === 'docked';
+
+  const containerClass = isDocked
+    ? 'w-full h-full flex flex-col pointer-events-auto text-white overflow-hidden font-satoshi bg-transparent'
+    : 'w-[370px] bg-[#0A0D14]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.9)] flex flex-col pointer-events-auto text-white overflow-hidden font-satoshi animate-in fade-in zoom-in-95 duration-200';
+
+  const bodyClass = isDocked
+    ? 'p-5 space-y-5 overflow-y-auto flex-1 custom-scrollbar'
+    : 'p-5 space-y-5 overflow-y-auto max-h-[58vh] custom-scrollbar';
 
   return (
-    <div className="w-[370px] bg-[#0A0D14]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.9)] flex flex-col pointer-events-auto text-white overflow-hidden font-satoshi animate-in fade-in zoom-in-95 duration-200">
+    <div className={containerClass}>
       
       {/* Header */}
       <div className="px-5 py-4 flex justify-between items-start border-b border-white/10 bg-white/[0.02]">
@@ -80,17 +96,19 @@ export function WardRiskPopup({ profile, onClose, onRequestAIExplanation, isLoad
             Severity {profile.overallSeverity}: {sevInfo.label}
           </div>
         </div>
-        <button 
-          onClick={onClose}
-          className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-          aria-label="Close popup"
-        >
-          <X className="w-4 h-4" />
-        </button>
+        {onClose && (
+          <button 
+            onClick={onClose}
+            className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+            aria-label="Close popup"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Body */}
-      <div className="p-5 space-y-5 overflow-y-auto max-h-[58vh] custom-scrollbar">
+      <div className={bodyClass}>
         
         {/* Active Hazards */}
         <section>
@@ -147,8 +165,8 @@ export function WardRiskPopup({ profile, onClose, onRequestAIExplanation, isLoad
               <div className="text-[10px] font-mono text-gray-400 uppercase tracking-wider mb-1">3-Day Rain</div>
               <div className="font-clash font-bold text-sm text-white flex items-center gap-1.5">
                 {profile.rainfall3DaySum.toFixed(0)} mm
-                {profile.rainfallTrend === 'rising' && <span className="text-red-400 text-xs">↑</span>}
-                {profile.rainfallTrend === 'falling' && <span className="text-emerald-400 text-xs">↓</span>}
+                {profile.rainfallTrend === 'rising' && <span className="text-white text-xs font-bold">↑</span>}
+                {profile.rainfallTrend === 'falling' && <span className="text-zinc-400 text-xs">↓</span>}
               </div>
             </div>
             <div className="p-3 bg-white/[0.03] rounded-xl border border-white/5">
@@ -174,12 +192,12 @@ export function WardRiskPopup({ profile, onClose, onRequestAIExplanation, isLoad
             <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.15em] font-mono mb-2">
               Historical Analogue
             </h4>
-            <div className="p-3 bg-[#5B8DEF]/10 border border-[#5B8DEF]/20 rounded-xl text-xs">
+            <div className="p-3 bg-white/[0.04] border border-white/10 rounded-xl text-xs">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-gray-300">Closest Past Event:</span>
                 <strong className="font-mono text-white font-semibold">{profile.similarHistoricalEvent.date}</strong>
               </div>
-              <p className="text-white/90 font-medium mb-1.5">{profile.similarHistoricalEvent.outcome}</p>
+              <p className="text-white font-medium mb-1.5">{profile.similarHistoricalEvent.outcome}</p>
               <p className="text-[11px] text-gray-400 italic">{profile.similarHistoricalEvent.similarityNote}</p>
             </div>
           </section>

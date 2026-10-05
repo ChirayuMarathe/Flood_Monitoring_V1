@@ -10,13 +10,13 @@ import { mumbaiWards, severityColors } from '@/lib/mumbai-data';
 import { useRef } from 'react';
 
 function SeverityDot({ severity }: { severity: number }) {
-  const color = severity === 0 ? '#10B981' : severity === 1 ? '#F59E0B' : severity === 2 ? '#F97316' : '#EF4444';
+  const color = severity === 0 ? '#71717A' : severity === 1 ? '#A1A1AA' : severity === 2 ? '#D4D4D8' : '#FFFFFF';
   return (
     <span
       className="inline-block w-2 h-2 rounded-full flex-shrink-0"
       style={{
         backgroundColor: color,
-        boxShadow: severity >= 2 ? `0 0 8px ${color}60` : 'none',
+        boxShadow: severity >= 2 ? `0 0 8px rgba(255,255,255,0.4)` : 'none',
       }}
     />
   );
@@ -52,21 +52,21 @@ export default function LeftSidebar() {
   const ward = selectedWard();
   const severity = selectedWardId ? (wardSeverities[selectedWardId] ?? 0) : 0;
   const sevStyle = severity === 0
-    ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
+    ? 'bg-white/[0.04] border-white/10 text-zinc-400'
     : severity === 1
-    ? 'bg-amber-500/10 border-amber-500/25 text-amber-400'
+    ? 'bg-white/[0.08] border-white/15 text-zinc-200'
     : severity === 2
-    ? 'bg-orange-500/10 border-orange-500/25 text-orange-400'
-    : 'bg-red-500/10 border-red-500/25 text-red-400';
+    ? 'bg-white/[0.14] border-white/25 text-white'
+    : 'bg-white text-black font-bold border-white';
 
   return (
     <div
       className="h-full flex flex-col overflow-hidden w-[340px]"
       style={{
-        background: 'rgba(20, 22, 29, 0.92)',
+        background: 'rgba(5, 7, 10, 0.95)',
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
-        borderRight: '1px solid rgba(255,255,255,0.06)',
+        borderRight: '1px solid rgba(255,255,255,0.08)',
       }}
     >
       {/* Ward Selector */}
@@ -85,19 +85,19 @@ export default function LeftSidebar() {
                 onClick={() => setSelectedWard(w.id)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all duration-200 group ${
                   isActive
-                    ? 'bg-amber-500/8 border-l-2 border-amber-500/60'
+                    ? 'bg-white/10 border-l-2 border-white'
                     : 'hover:bg-white/3 border-l-2 border-transparent'
                 }`}
               >
                 <SeverityDot severity={wSev} />
                 <span className={`text-[13px] font-medium flex-1 truncate ${
-                  isActive ? 'text-amber-300' : 'text-white/55 group-hover:text-white/75'
+                  isActive ? 'text-white font-semibold' : 'text-zinc-400 group-hover:text-white'
                 }`}
                 >
                   {w.name}
                 </span>
                 <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                  isActive ? 'bg-amber-500/15 text-amber-400' : 'bg-white/4 text-white/25'
+                  isActive ? 'bg-white/20 text-white' : 'bg-white/4 text-white/25'
                 }`}
                 >
                   {w.code}
@@ -164,19 +164,19 @@ export default function LeftSidebar() {
           </div>
           <div className="grid grid-cols-2 gap-1.5">
             <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-white/2">
-              <span className="w-2 h-2 rounded-sm bg-emerald-500" />
+              <span className="w-2 h-2 rounded-sm bg-zinc-500" />
               <span className="text-[11px] text-white/45">Normal</span>
             </div>
             <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-white/2">
-              <span className="w-2 h-2 rounded-sm bg-amber-500" />
+              <span className="w-2 h-2 rounded-sm bg-zinc-400" />
               <span className="text-[11px] text-white/45">Watch</span>
             </div>
             <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-white/2">
-              <span className="w-2 h-2 rounded-sm bg-orange-400" />
+              <span className="w-2 h-2 rounded-sm bg-zinc-200" />
               <span className="text-[11px] text-white/45">Moderate</span>
             </div>
             <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-white/2">
-              <span className="w-2 h-2 rounded-sm bg-red-500" />
+              <span className="w-2 h-2 rounded-sm bg-white" />
               <span className="text-[11px] text-white/45">Critical</span>
             </div>
           </div>

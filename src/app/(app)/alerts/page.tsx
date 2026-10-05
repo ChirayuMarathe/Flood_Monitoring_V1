@@ -10,6 +10,9 @@ import {
 import { useFloodStore, getWardsForCity } from '@/store/flood-store';
 import { timeSeriesData, severityColorHex } from '@/lib/mumbai-data';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+const BottomPanel = dynamic(() => import('@/components/flood-dashboard/BottomPanel'), { ssr: false });
 
 const severityLabel: Record<number, string> = { 0: 'Normal', 1: 'Watch', 2: 'Elevated', 3: 'Critical' };
 const severityIcon: Record<number, string> = { 0: '●', 1: '◐', 2: '◉', 3: '⬤' };
@@ -17,12 +20,12 @@ const severityIcon: Record<number, string> = { 0: '●', 1: '◐', 2: '◉', 3: 
 type FilterLevel = 'all' | 'critical' | 'elevated' | 'watch';
 
 export default function AlertsPage() {
-  const { alertHistory, wardSeverities, wardRiskProfiles, activeCity, switchCity, timeIndex, selectedWardId, setSelectedWard } = useFloodStore();
+  const { alertHistory, wardSeverities, wardRiskProfiles, activeCity, switchCity, timeIndex, selectedWardId, setSelectedWard, currentTimeData } = useFloodStore();
   const [filterLevel, setFilterLevel] = useState<FilterLevel>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedWard, setExpandedWard] = useState<string | null>(null);
 
-  const td = timeSeriesData[timeIndex];
+  const td = currentTimeData() || timeSeriesData[0];
   const cityLabel = activeCity === 'navi_mumbai' ? 'Navi Mumbai' : activeCity.charAt(0).toUpperCase() + activeCity.slice(1);
   const cityWards = useMemo(() => getWardsForCity(activeCity), [activeCity]);
 
@@ -70,7 +73,7 @@ export default function AlertsPage() {
         {/* Page Header with City Switcher */}
         <div className="flex flex-col md:flex-row md:items-center justify-between pb-3 border-b border-white/5 gap-4">
           <div>
-            <span className="text-[10px] font-mono font-semibold tracking-[0.2em] text-[#EF4444] uppercase">MONITORING ACTIVE</span>
+            <span className="text-[10px] font-mono font-semibold tracking-[0.2em] text-zinc-400 uppercase">MONITORING ACTIVE</span>
             <h2 className="text-[26px] font-bold font-clash text-white tracking-tight">Alert Center</h2>
             <p className="text-[12px] text-[#8B919E] font-satoshi mt-0.5">
               Real-time flood risk monitoring across {cityWards.length} wards in {cityLabel}
@@ -79,7 +82,7 @@ export default function AlertsPage() {
           
           <div className="flex items-center gap-3 flex-wrap">
             {/* 3-City Switcher Bar */}
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-[#13161D] border border-white/10 shadow-sm">
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-black/80 border border-white/10 shadow-sm">
               {(['mumbai', 'pune', 'navi_mumbai'] as const).map(city => (
                 <button
                   key={city}
@@ -95,17 +98,22 @@ export default function AlertsPage() {
               ))}
             </div>
 
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#13161D] border border-white/10 shadow-sm">
-              <Activity size={13} className="text-[#5EA977] animate-pulse" />
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/80 border border-white/10 shadow-sm">
+              <Activity size={13} className="text-white animate-pulse" />
               <span className="text-[11px] text-[#E1E4EA] font-mono font-medium">Live</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#13161D] border border-white/10 shadow-sm">
-              <Clock size={13} className="text-[#5EA977]" />
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/80 border border-white/10 shadow-sm">
+              <Clock size={13} className="text-white" />
               <span className="text-[11px] text-[#E1E4EA] font-mono font-medium">
-                Day {timeIndex + 1} — Jul {td.day}
+                Day {timeIndex + 1} — {td.date ?? '2024-07-09'}
               </span>
             </div>
           </div>
+        </div>
+
+        {/* Embedded Interactive Simulation Timeline Controller */}
+        <div className="rounded-2xl overflow-hidden border border-white/10 bg-black/70 p-1 shadow-lg">
+          <BottomPanel mode="embedded" />
         </div>
 
         {/* High-End Mission Alert Telemetry Cards */}
@@ -116,9 +124,9 @@ export default function AlertsPage() {
               value: criticalCount,
               unit: 'wards',
               tag: criticalCount > 0 ? 'ACTIVE EVAC' : 'ALL CLEAR',
-              color: '#EF4444',
+              color: '#FFFFFF',
               icon: Zap,
-              glow: 'rgba(239, 68, 68, 0.2)',
+              glow: 'rgba(255, 255, 255, 0.08)',
               sub: criticalCount > 0 ? 'Severe inundation threshold exceeded' : 'Zero wards in critical state',
               pulse: criticalCount > 0,
               progress: criticalCount > 0 ? Math.min(100, criticalCount * 33) : 0,
@@ -128,9 +136,9 @@ export default function AlertsPage() {
               value: elevatedCount,
               unit: 'wards',
               tag: elevatedCount > 0 ? 'MONITOR' : 'NOMINAL',
-              color: '#F59E0B',
+              color: '#D4D4D8',
               icon: AlertTriangle,
-              glow: 'rgba(245, 158, 11, 0.15)',
+              glow: 'rgba(255, 255, 255, 0.05)',
               sub: 'Approaching critical rainfall limits',
               pulse: false,
               progress: cityWards.length > 0 ? (elevatedCount / cityWards.length) * 100 : 0,
@@ -140,9 +148,9 @@ export default function AlertsPage() {
               value: watchCount,
               unit: 'wards',
               tag: 'STANDBY',
-              color: '#3B82F6',
+              color: '#A1A1AA',
               icon: Shield,
-              glow: 'rgba(59, 130, 246, 0.15)',
+              glow: 'rgba(255, 255, 255, 0.03)',
               sub: 'Moderate topographic runoff watch',
               pulse: false,
               progress: cityWards.length > 0 ? (watchCount / cityWards.length) * 100 : 0,
@@ -152,9 +160,9 @@ export default function AlertsPage() {
               value: totalAlerts,
               unit: 'logged',
               tag: 'FEED SYNC',
-              color: '#8B5CF6',
+              color: '#71717A',
               icon: Bell,
-              glow: 'rgba(139, 92, 246, 0.15)',
+              glow: 'rgba(255, 255, 255, 0.02)',
               sub: 'Real-time severity transition events',
               pulse: false,
               progress: Math.min(100, totalAlerts * 4),
@@ -165,11 +173,11 @@ export default function AlertsPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-[#161922] via-[#10131B] to-[#0D0F15] p-5 border border-white/10 hover:border-white/20 transition-all duration-300 shadow-[0_8px_24px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] group"
+              className="relative overflow-hidden rounded-2xl bg-black/85 backdrop-blur-xl p-5 border border-white/10 hover:border-white/20 transition-all duration-300 shadow-[0_12px_32px_rgba(0,0,0,0.65),inset_0_1px_1px_rgba(255,255,255,0.06)] group"
             >
               {/* Radial glow */}
               <div
-                className="pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full blur-2xl opacity-60 group-hover:opacity-100 transition-opacity"
+                className="pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full blur-2xl opacity-40 group-hover:opacity-100 transition-opacity"
                 style={{ background: card.glow }}
               />
 
@@ -226,15 +234,15 @@ export default function AlertsPage() {
 
         {/* Filter Bar */}
         <div className="flex items-center gap-3 py-2">
-          <div className="flex items-center gap-1 p-1 rounded-xl bg-[#13161D] border border-white/10">
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-black/80 border border-white/10">
             {(['all', 'critical', 'elevated', 'watch'] as FilterLevel[]).map(level => (
               <button
                 key={level}
                 onClick={() => setFilterLevel(level)}
                 className={`px-3.5 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
                   filterLevel === level
-                    ? 'bg-white/10 text-white shadow-sm'
-                    : 'text-[#525866] hover:text-white'
+                    ? 'bg-white/15 text-white shadow-sm font-semibold'
+                    : 'text-[#8B919E] hover:text-white'
                 }`}
               >
                 {level === 'all' ? 'All Wards' : level.charAt(0).toUpperCase() + level.slice(1)}
@@ -242,13 +250,13 @@ export default function AlertsPage() {
             ))}
           </div>
           <div className="flex-1 relative">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#525866]" />
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" />
             <input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search wards..."
-              className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#13161D] border border-white/10 text-[12px] text-white placeholder-[#525866] outline-none focus:border-[#5B8DEF]/30 transition-colors font-satoshi"
+              className="w-full pl-9 pr-3 py-2 rounded-xl bg-black/80 border border-white/10 text-[12px] text-white placeholder-[#64748B] outline-none focus:border-white/30 transition-colors font-satoshi"
             />
           </div>
         </div>
@@ -257,7 +265,7 @@ export default function AlertsPage() {
         <div className="grid grid-cols-3 gap-4">
           {/* Ward Status Grid (2 cols) */}
           <div className="col-span-2 space-y-2">
-            <h3 className="text-[11px] font-mono font-semibold tracking-[0.15em] text-[#525866] uppercase px-1">
+            <h3 className="text-[11px] font-mono font-semibold tracking-[0.15em] text-[#8B919E] uppercase px-1">
               Ward Risk Status ({wardAlerts.length} wards)
             </h3>
             <div className="space-y-1.5">
@@ -275,15 +283,15 @@ export default function AlertsPage() {
                       transition={{ delay: Math.min(i * 0.02, 0.5) }}
                       className={`rounded-xl border overflow-hidden transition-all ${
                         wa.severity >= 3
-                          ? 'bg-gradient-to-r from-red-500/5 to-[#13161D] border-red-500/20'
+                          ? 'bg-black/90 border-white/50 shadow-[0_0_20px_rgba(255,255,255,0.08)]'
                           : wa.severity >= 2
-                          ? 'bg-gradient-to-r from-orange-500/5 to-[#13161D] border-orange-500/15'
-                          : 'bg-[#13161D] border-white/10'
+                          ? 'bg-black/90 border-white/25'
+                          : 'bg-black/80 border-white/10'
                       }`}
                     >
                       <button
                         onClick={() => setExpandedWard(isExpanded ? null : wa.ward.id)}
-                        className="w-full px-4 py-3 flex items-center gap-3 hover:bg-white/[0.02] transition-colors"
+                        className="w-full px-4 py-3 flex items-center gap-3 hover:bg-white/[0.04] transition-colors"
                       >
                         {/* Severity Indicator */}
                         <div
@@ -355,8 +363,8 @@ export default function AlertsPage() {
                                   <p className="text-[10px] text-[#525866] uppercase tracking-wider font-mono mb-1.5">Active Hazards</p>
                                   <div className="space-y-1.5">
                                     {profile.activeHazards.map((h, hi) => (
-                                      <div key={hi} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-[#1A1E27] border border-white/5">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] mt-1.5 flex-shrink-0" />
+                                      <div key={hi} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-white/70 mt-1.5 flex-shrink-0" />
                                         <div>
                                           <p className="text-[11px] font-medium text-white font-satoshi">
                                             {h.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
@@ -372,8 +380,8 @@ export default function AlertsPage() {
 
                               {/* Historical Match */}
                               {profile.similarHistoricalEvent && (
-                                <div className="px-3 py-2 rounded-lg bg-[#5B8DEF]/5 border border-[#5B8DEF]/10">
-                                  <p className="text-[10px] text-[#5B8DEF] uppercase tracking-wider font-mono mb-1">Historical Match</p>
+                                <div className="px-3 py-2 rounded-lg bg-white/[0.04] border border-white/10">
+                                  <p className="text-[10px] text-zinc-300 uppercase tracking-wider font-mono mb-1">Historical Match</p>
                                   <p className="text-[11px] text-[#C1C5CD] font-satoshi">
                                     <strong className="text-white">{profile.similarHistoricalEvent.date}</strong>: {profile.similarHistoricalEvent.outcome}
                                   </p>
@@ -386,7 +394,7 @@ export default function AlertsPage() {
                                 <Link
                                   href="/map"
                                   onClick={() => setSelectedWard(wa.ward.id)}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#5B8DEF]/10 border border-[#5B8DEF]/20 text-[10px] font-medium text-[#5B8DEF] hover:bg-[#5B8DEF]/20 transition-colors"
+                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-[10px] font-medium text-white hover:bg-white/20 transition-colors"
                                 >
                                   <MapPin size={10} /> View on Map
                                 </Link>
@@ -404,9 +412,9 @@ export default function AlertsPage() {
               </AnimatePresence>
 
               {wardAlerts.length === 0 && (
-                <div className="py-12 text-center rounded-xl bg-[#13161D] border border-white/10">
-                  <Shield size={28} className="text-[#242832] mx-auto mb-3" />
-                  <p className="text-[13px] text-[#525866] font-satoshi">No wards match the current filter</p>
+                <div className="py-12 text-center rounded-2xl bg-black/80 border border-white/10">
+                  <Shield size={28} className="text-[#64748B] mx-auto mb-3" />
+                  <p className="text-[13px] text-[#8B919E] font-satoshi">No wards match the current filter</p>
                 </div>
               )}
             </div>
@@ -414,26 +422,26 @@ export default function AlertsPage() {
 
           {/* Event Timeline (1 col) */}
           <div className="col-span-1">
-            <h3 className="text-[11px] font-mono font-semibold tracking-[0.15em] text-[#525866] uppercase px-1 mb-2">
+            <h3 className="text-[11px] font-mono font-semibold tracking-[0.15em] text-[#8B919E] uppercase px-1 mb-2">
               Event Timeline ({filteredHistory.length})
             </h3>
-            <div className="rounded-xl bg-[#13161D] border border-white/10 overflow-hidden">
+            <div className="rounded-2xl bg-black/85 backdrop-blur-xl border border-white/10 shadow-[0_12px_32px_rgba(0,0,0,0.65)] overflow-hidden">
               <div className="overflow-y-auto max-h-[600px] custom-scrollbar">
                 {filteredHistory.length === 0 ? (
                   <div className="py-12 text-center">
-                    <Bell size={24} className="text-[#242832] mx-auto mb-2" />
-                    <p className="text-[11px] text-[#525866] font-satoshi">No events recorded.</p>
-                    <p className="text-[10px] text-[#525866]/60 mt-0.5 font-satoshi">Adjust the timeline to trigger severity changes</p>
+                    <Bell size={24} className="text-[#64748B] mx-auto mb-2" />
+                    <p className="text-[11px] text-[#8B919E] font-satoshi">No events recorded.</p>
+                    <p className="text-[10px] text-[#64748B] mt-0.5 font-satoshi">Scrub simulation timeline above to advance events</p>
                   </div>
                 ) : (
                   <div className="relative">
                     {/* Timeline line */}
-                    <div className="absolute left-[23px] top-0 bottom-0 w-px bg-white/5" />
+                    <div className="absolute left-[23px] top-0 bottom-0 w-px bg-white/10" />
 
                     {filteredHistory.map((alert, i) => {
                       const isEscalation = alert.newSeverity > alert.oldSeverity;
                       const isCritical = alert.newSeverity === 3;
-                      const newColor = severityColorHex[alert.newSeverity] || '#525866';
+                      const newColor = severityColorHex[alert.newSeverity] || '#8B919E';
 
                       return (
                         <motion.div
@@ -441,7 +449,7 @@ export default function AlertsPage() {
                           initial={{ opacity: 0, x: -5 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: Math.min(i * 0.03, 0.5) }}
-                          className="relative flex items-start gap-3 px-4 py-3 hover:bg-[#1A1E27] transition-colors"
+                          className="relative flex items-start gap-3 px-4 py-3 hover:bg-white/[0.04] transition-colors"
                         >
                           {/* Timeline dot */}
                           <div className="relative z-10 mt-0.5">
@@ -458,15 +466,15 @@ export default function AlertsPage() {
                             <p className="text-[12px] font-medium text-[#C1C5CD] truncate font-satoshi">{alert.wardName}</p>
                             <div className="flex items-center gap-1.5 mt-0.5">
                               {isEscalation ? (
-                                <TrendingUp size={10} className={isCritical ? 'text-red-400' : 'text-[#8B919E]'} />
+                                <TrendingUp size={10} className={isCritical ? 'text-white' : 'text-zinc-400'} />
                               ) : (
-                                <TrendingDown size={10} className="text-[#5B8DEF]" />
+                                <TrendingDown size={10} className="text-zinc-400" />
                               )}
                               <span className="text-[10px] font-medium text-[#525866]">
                                 {severityLabel[alert.oldSeverity]}
                               </span>
                               <ArrowRight size={9} className="text-[#525866]" />
-                              <span className="text-[10px] font-medium" style={{ color: newColor }}>
+                              <span className="text-[10px] font-medium text-white">
                                 {severityLabel[alert.newSeverity]}
                               </span>
                             </div>

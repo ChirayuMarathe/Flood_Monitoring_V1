@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import * as Cesium from 'cesium';
 import {
   Viewer,
@@ -22,15 +22,12 @@ import {
 import { useFloodStore } from '@/store/flood-store';
 import { WardLayer } from '@/lib/gis/WardLayer';
 import { CITY_CENTERS } from '@/lib/gis/WardData';
-import { useState } from 'react';
 import { flyToCity, flyToWard, initCameraControls } from '@/lib/gis/cameraController';
 
 const CESIUM_TOKEN = process.env.NEXT_PUBLIC_CESIUM_TOKEN || '';
 
-import { loadCityTileset, loadPhotorealTileset, loadOsmBuildingsTileset } from '@/lib/gis/BuildingTileset';
-import { WardRiskPopup } from './WardRiskPopup';
+import { loadCityTileset, loadOsmBuildingsTileset } from '@/lib/gis/BuildingTileset';
 import WardTagLayer from './WardTagLayer';
-import { wardProfileKey } from '@/lib/risk/WardRiskProfile';
 
 export default function CesiumMapView() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -48,133 +45,128 @@ export default function CesiumMapView() {
   const [wardAnchors, setWardAnchors] = useState<{ wardId: string; position: Cesium.Cartesian3 }[]>([]);
 
   const activeCity = useFloodStore((s) => s.activeCity);
-  const popupPosition = useFloodStore((s) => s.popupPosition);
   const selectedWardId = useFloodStore((s) => s.selectedWardId);
   const setSelectedWard = useFloodStore((s) => s.setSelectedWard);
-  const setPopupPosition = useFloodStore((s) => s.setPopupPosition);
   const wardRiskProfiles = useFloodStore((s) => s.wardRiskProfiles);
   const buildingMode = useFloodStore((s) => s.buildingMode);
+  const ragPanelOpen = useFloodStore((s) => s.ragPanelOpen);
 
-  // Handle city switching — fly camera to new city and ensure its layer is visible
+  // Helper to clip the tileset to the selected ward only (removes all external analytical buildings)
+  const applyBuildingClipping = useCallback(() => {
+    const tileset = tilesetsRef.current.get(activeCity) || osmBuildingsRef.current;
+    const wardLayer = wardLayerRef.current;
+    if (!tileset) return;
+
+    if (buildingMode === 'off') {
+      tileset.show = false;
+      tileset.clippingPolygons = undefined as any;
+      return;
+    }
+
+    if (selectedWardId) {
+      const positions = wardLayer?.getWardBoundaryPositions(selectedWardId);
+      if (positions && positions.length >= 3) {
+        tileset.clippingPolygons = new Cesium.ClippingPolygonCollection({
+          polygons: [new Cesium.ClippingPolygon({ positions })],
+          inverse: true, // preserves ONLY buildings inside the ward boundary, clips all others
+          quality: 1.0,
+        });
+        tileset.show = true;
+        return;
+      }
+    }
+
+    // When no specific ward is selected, show buildings for the city
+    tileset.clippingPolygons = undefined as any;
+    tileset.show = true;
+  }, [activeCity, selectedWardId, buildingMode]);
+
+  useEffect(() => {
+    applyBuildingClipping();
+  }, [applyBuildingClipping]);
+
+  // Handle city switching — fly camera to new city and ensure ONLY active city's wards are visible
   useEffect(() => {
     const viewer = viewerRef.current;
     const wardLayer = wardLayerRef.current;
     if (!viewer || !wardLayer || !activeCity || !mapReady) return;
 
-    wardLayer.setCityVisible(activeCity as any, true);
-    flyToCity(viewer, activeCity);
+    wardLayer.loadCity(activeCity as any).then(() => {
+      // Only make the active city visible, hide all other cities to eliminate extra load
+      for (const c of ['mumbai', 'pune', 'navi_mumbai'] as const) {
+        wardLayer.setCityVisible(c, c === activeCity);
+      }
+      setWardAnchors(wardLayer.getWardAnchors(activeCity as any));
+      flyToCity(viewer, activeCity);
+    }).catch(err => {
+      console.warn(`[CesiumMapView] Failed to switch to city ${activeCity}:`, err);
+    });
   }, [activeCity, mapReady]);
 
-  // Building layer: the photogrammetry base and our analytical extrusions occupy
-  // the same space, so exactly one is ever visible. Deliberately does not touch
-  // the camera — toggling the layer shouldn't move the user's view.
+  // Ward-specific local building layer: loads strictly the active city's local tileset
+  // and dynamically clips to only the selected ward
   useEffect(() => {
     let cancelled = false;
     const viewer = viewerRef.current;
     if (!viewer || !mapReady) return;
 
-    console.log(`[Buildings] Mode='${buildingMode}', city='${activeCity}', mapReady=${mapReady}`);
+    // The globe is ALWAYS visible so terrain and satellite imagery remain crystal clear
+    viewer.scene.globe.show = true;
 
-    const showPhotoreal = async () => {
+    if (photorealRef.current) photorealRef.current.show = false;
+    if (osmBuildingsRef.current) osmBuildingsRef.current.show = false;
+
+    if (buildingMode === 'off') {
       for (const ts of tilesetsRef.current.values()) ts.show = false;
-      if (osmBuildingsRef.current) osmBuildingsRef.current.show = false;
+      setLoadingProgress(null);
+      return;
+    }
 
-      if (!photorealRef.current) {
-        setLoadingProgress(5);
-        console.log('[Buildings] Loading Google Photorealistic 3D Tiles (Ion asset 2275207)...');
-        try {
-          const ts = await loadPhotorealTileset(viewer);
-          if (cancelled || !ts) { console.warn('[Buildings] Photoreal load returned null or cancelled'); return; }
-          photorealRef.current = ts;
-          console.log('[Buildings] Photorealistic tiles loaded successfully');
-        } catch (err) {
-          console.error('[Buildings] Photorealistic tiles FAILED — falling back to analytical:', err);
-          if (!cancelled) useFloodStore.getState().setBuildingMode('analytical');
-          return;
-        } finally {
-          if (!cancelled) setLoadingProgress(null);
-        }
-      }
-      if (cancelled) return;
-      photorealRef.current!.show = true;
-      viewer.scene.globe.show = false;
-    };
+    if (tilesetsRef.current.has(activeCity)) {
+      applyBuildingClipping();
+      return;
+    }
 
-    const showAnalytical = async () => {
-      if (photorealRef.current) photorealRef.current.show = false;
-      viewer.scene.globe.show = true;
-
-      // 1. If local offline tiles exist and are loaded for this city, show them
-      for (const [key, ts] of tilesetsRef.current) ts.show = key === activeCity;
-      if (tilesetsRef.current.has(activeCity)) {
-        console.log(`[Buildings] Re-showing cached local tiles for '${activeCity}'`);
-        if (osmBuildingsRef.current) osmBuildingsRef.current.show = false;
-        return;
-      }
-
-      setLoadingProgress(0);
-      try {
-        console.log(`[Buildings] Probing local tiles at /tiles/${activeCity}/tileset.json ...`);
-        const localTileset = await loadCityTileset(viewer, activeCity, {
-          onProgress: (pending, processing) => {
-            if (cancelled) return;
-            const outstanding = pending + processing;
-            if (outstanding === 0) {
-              setLoadingProgress(100);
-              setTimeout(() => { if (!cancelled) setLoadingProgress(null); }, 600);
-            } else {
-              setLoadingProgress(Math.max(5, 100 - outstanding * 4));
-            }
-          },
-        });
-
+    loadCityTileset(viewer, activeCity, {
+      onProgress: (pending, processing) => {
         if (cancelled) return;
-
-        if (localTileset) {
-          console.log(`[Buildings] Local 3D Tiles for '${activeCity}' loaded — ${localTileset.root?.children?.length ?? '?'} root children`);
-          tilesetsRef.current.set(activeCity, localTileset);
-          const store = useFloodStore.getState();
-          localTileset.show = store.activeCity === activeCity && store.buildingMode === 'analytical';
-          if (osmBuildingsRef.current) osmBuildingsRef.current.show = false;
-          return;
+        const outstanding = pending + processing;
+        if (outstanding === 0) {
+          setLoadingProgress(100);
+          setTimeout(() => { if (!cancelled) setLoadingProgress(null); }, 400);
+        } else {
+          setLoadingProgress(Math.max(5, 100 - outstanding * 4));
         }
-
-        // 2. Cloud streaming fallback: Cesium OSM 3D Buildings (0 MB local disk storage)
-        console.log('[Buildings] No local tiles — falling back to Cesium OSM Buildings...');
-        if (!osmBuildingsRef.current) {
-          const osm = await loadOsmBuildingsTileset(viewer, {
-            onProgress: (pending, processing) => {
-              if (cancelled) return;
-              const outstanding = pending + processing;
-              if (outstanding === 0) {
-                setLoadingProgress(100);
-                setTimeout(() => { if (!cancelled) setLoadingProgress(null); }, 600);
-              } else {
-                setLoadingProgress(Math.max(5, 100 - outstanding * 4));
-              }
-            },
-          });
-          if (cancelled || !osm) return;
-          osmBuildingsRef.current = osm;
-        }
-
-        if (osmBuildingsRef.current) {
-          const store = useFloodStore.getState();
-          osmBuildingsRef.current.show = store.buildingMode === 'analytical';
-        }
-      } catch (err) {
-        if (!cancelled) {
-          console.error(`[Buildings] Failed to load building tileset for ${activeCity}:`, err);
-          setLoadingProgress(null);
-        }
+      },
+    }).then(async (localTileset) => {
+      if (cancelled) return;
+      setLoadingProgress(null);
+      if (localTileset) {
+        console.log(`[Buildings] Local ward 3D tiles for '${activeCity}' loaded successfully`);
+        tilesetsRef.current.set(activeCity, localTileset);
+        applyBuildingClipping();
+      } else {
+        console.log(`[Buildings] Local tiles not available, loading Cesium OSM Buildings for ${activeCity}`);
+        const osmTs = await loadOsmBuildingsTileset(viewer);
+        if (cancelled || !osmTs) return;
+        osmBuildingsRef.current = osmTs;
+        tilesetsRef.current.set(activeCity, osmTs);
+        applyBuildingClipping();
       }
-    };
-
-    if (buildingMode === 'photoreal') showPhotoreal();
-    else showAnalytical();
+    }).catch(async (err) => {
+      if (!cancelled) {
+        console.warn(`[Buildings] Local tileset error, attempting OSM Buildings fallback:`, err);
+        setLoadingProgress(null);
+        const osmTs = await loadOsmBuildingsTileset(viewer);
+        if (cancelled || !osmTs) return;
+        osmBuildingsRef.current = osmTs;
+        tilesetsRef.current.set(activeCity, osmTs);
+        applyBuildingClipping();
+      }
+    });
 
     return () => { cancelled = true; };
-  }, [buildingMode, activeCity, mapReady]);
+  }, [buildingMode, activeCity, mapReady, applyBuildingClipping]);
 
   // React to ward selection (pinned wards, ward clicks in sidebar)
   const getSelectedWard = useFloodStore((s) => s.selectedWard);
@@ -268,19 +260,20 @@ export default function CesiumMapView() {
     viewer.scene.globe.show = true;
     viewer.scene.globe.depthTestAgainstTerrain = false;
 
-    // Scene settings & Shadows
-    viewer.shadows = true;
-    viewer.terrainShadows = Cesium.ShadowMode.ENABLED;
+    // High-performance scene settings (disabled heavy shadow maps for smooth 60 FPS)
+    viewer.shadows = false;
+    viewer.terrainShadows = Cesium.ShadowMode.DISABLED;
+    viewer.resolutionScale = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 1.25) : 1.0;
     viewer.scene.globe.baseColor = Color.fromCssColorString('#0B0D12');
     viewer.scene.globe.enableLighting = true;
     viewer.scene.light = new SunLight();
     
-    // Lock clock to 10:00 AM IST (4:30 UTC) for clear shadows
+    // Lock clock to 10:00 AM IST (4:30 UTC) for clear ambient daylight
     viewer.clock.currentTime = Cesium.JulianDate.fromIso8601('2024-07-15T04:30:00Z');
     viewer.clock.shouldAnimate = false;
     
     if (viewer.scene.verticalExaggeration !== undefined) {
-      viewer.scene.verticalExaggeration = 1.5;
+      viewer.scene.verticalExaggeration = 1.3;
     }
     
     if (viewer.scene.postProcessStages) {
@@ -317,21 +310,9 @@ export default function CesiumMapView() {
       console.log(`[CesiumMapView] Initial city '${initialCity}' loaded — map ready`);
       setMapReady(true);
       
-      const { wardLayerVisibility } = useFloodStore.getState();
-      wardLayer.setCityVisible(initialCity as any, wardLayerVisibility[initialCity as keyof typeof wardLayerVisibility] ?? true);
-      setWardAnchors(wardLayer.getWardAnchors());
+      wardLayer.setCityVisible(initialCity as any, true);
+      setWardAnchors(wardLayer.getWardAnchors(initialCity as any));
       useFloodStore.getState().initRiskData();
-
-      // Background load other cities without blocking UI
-      const otherCities = (['mumbai', 'pune', 'navi_mumbai'] as const).filter(c => c !== initialCity);
-      Promise.all(otherCities.map(c => wardLayer.loadCity(c))).then(() => {
-        console.log('[CesiumMapView] Remaining cities background loaded');
-        const currentVis = useFloodStore.getState().wardLayerVisibility;
-        for (const c of otherCities) {
-          wardLayer.setCityVisible(c, currentVis[c]);
-        }
-        setWardAnchors(wardLayer.getWardAnchors());
-      }).catch(err => console.warn('[CesiumMapView] Background cities load error:', err));
     }).catch(err => console.error('[CesiumMapView] Ward layer load failed:', err));
     
     // Fly to initial city
@@ -403,10 +384,6 @@ export default function CesiumMapView() {
           if (!useFloodStore.getState().ragPanelOpen) {
             useFloodStore.getState().toggleRAGPanel();
           }
-          useFloodStore.getState().setPopupPosition({
-            x: click.position.x,
-            y: click.position.y,
-          });
         }
       } else {
         // Click on empty space — clear selection
@@ -486,9 +463,11 @@ export default function CesiumMapView() {
               flyToCity(viewerRef.current, activeCity);
             }
           }}
-          className="absolute bottom-6 right-6 z-40 bg-[#0A0A0A]/80 hover:bg-[#5EA977] text-white/90 hover:text-white border border-white/10 hover:border-[#5EA977]/50 backdrop-blur-md px-4 py-2 rounded-full text-xs font-medium transition-all duration-300 flex items-center gap-2 shadow-lg group"
+          className={`absolute bottom-6 z-20 bg-[#0A0A0A]/90 hover:bg-white text-white/90 hover:text-black border border-white/10 hover:border-white backdrop-blur-md px-3.5 py-2 rounded-xl text-xs font-mono font-medium transition-all duration-300 flex items-center gap-2 shadow-xl group cursor-pointer ${
+            ragPanelOpen ? 'right-[440px]' : 'right-6'
+          }`}
         >
-          <svg className="w-4 h-4 group-hover:-rotate-90 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-3.5 h-3.5 group-hover:-rotate-90 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
           </svg>
           Reset View
@@ -508,56 +487,6 @@ export default function CesiumMapView() {
         >
           <div className="font-medium text-[13px]">{hoverInfo.name}</div>
           <div className="text-[10px] text-[#9CA3AF] mt-0.5">{hoverInfo.city}</div>
-        </div>
-      )}
-
-      {/* Ward Risk Popup */}
-      {popupPosition && selectedWardId && wardRiskProfiles[wardProfileKey(selectedWardId)] && (
-        <div 
-          className="absolute z-50 pointer-events-none"
-          style={{ 
-            left: Math.max(20, Math.min(window.innerWidth - 420, popupPosition.x + 20)), 
-            top: Math.max(20, Math.min(window.innerHeight - 500, popupPosition.y - 100)) 
-          }}
-        >
-          <WardRiskPopup
-            profile={wardRiskProfiles[wardProfileKey(selectedWardId)]}
-            onClose={() => {
-              setPopupPosition(null);
-              setSelectedWard(null);
-            }}
-            onRequestAIExplanation={() => {
-              const store = useFloodStore.getState();
-              store.setRAGLoading(true);
-              if (!store.ragPanelOpen) {
-                store.toggleRAGPanel();
-              }
-              
-              const profile = wardRiskProfiles[wardProfileKey(selectedWardId)];
-              fetch('/api/rag-alert', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(profile),
-              })
-                .then(res => res.json())
-                .then(data => {
-                  store.addRAGMessage({
-                    role: 'assistant',
-                    content: data.response || data.error || 'Failed to generate alert.',
-                  });
-                })
-                .catch(err => {
-                  console.error('Failed to request AI explanation:', err);
-                  store.addRAGMessage({
-                    role: 'assistant',
-                    content: 'An error occurred while contacting the command center AI.',
-                  });
-                })
-                .finally(() => {
-                  store.setRAGLoading(false);
-                });
-            }}
-          />
         </div>
       )}
     </div>
