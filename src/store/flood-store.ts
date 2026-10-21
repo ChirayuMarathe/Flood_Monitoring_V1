@@ -312,7 +312,15 @@ export const useFloodStore = create<FloodState>((set, get) => ({
 
       // Only Mumbai GIDs 1-24 exist in CSV zonalStatsMap
       if (activeCity === 'mumbai') {
-        stats = zonalStatsMap.get(gid);
+        // Match by canonical code (e.g. "G/S", "K/W") first, then fallback to gid
+        if (ward.code) {
+          stats = Array.from(zonalStatsMap.values()).find(
+            (s) => s.name?.toUpperCase() === ward.code.toUpperCase()
+          );
+        }
+        if (!stats) {
+          stats = zonalStatsMap.get(gid);
+        }
       }
 
       if (!stats) {
@@ -341,10 +349,20 @@ export const useFloodStore = create<FloodState>((set, get) => ({
         activeCity === 'mumbai' ? trainingTable : []
       );
       profiles[ward.id] = profile;
-      if (ward.code) profiles[ward.code] = profile;
-      if (ward.code) profiles[`mumbai_${ward.code}`] = profile;
-      profiles[`mumbai_${ward.id}`] = profile;
+      profiles[`${activeCity}_${ward.id}`] = profile;
       profiles[ward.name] = profile;
+
+      if (ward.code) {
+        const clean = ward.code.trim();
+        profiles[clean] = profile;
+        profiles[clean.toUpperCase()] = profile;
+        profiles[clean.toLowerCase()] = profile;
+        profiles[clean.replace('/', '')] = profile;
+        profiles[`${activeCity}_${clean}`] = profile;
+        profiles[`${activeCity}_${clean.toUpperCase()}`] = profile;
+        profiles[`${activeCity}_${clean.toLowerCase()}`] = profile;
+        profiles[`${activeCity}_${clean.replace('/', '')}`] = profile;
+      }
     });
 
     set({ wardRiskProfiles: profiles });
@@ -353,7 +371,19 @@ export const useFloodStore = create<FloodState>((set, get) => ({
   getWardRiskProfile: (wardId: string) => {
     const key = wardProfileKey(wardId);
     const map = get().wardRiskProfiles;
-    return map[key] || map[wardId] || map[`mumbai_${wardId}`] || map[`mumbai_${key}`] || null;
+    const clean = key.replace(/\s+/g, '');
+    return (
+      map[key] ||
+      map[clean] ||
+      map[key.toUpperCase()] ||
+      map[clean.toUpperCase()] ||
+      map[wardId] ||
+      map[`mumbai_${wardId}`] ||
+      map[`mumbai_${key}`] ||
+      map[`pune_${wardId}`] ||
+      map[`navi_mumbai_${wardId}`] ||
+      null
+    );
   },
 
   rainfallMumbaiAvg: 156,
@@ -413,8 +443,8 @@ export const useFloodStore = create<FloodState>((set, get) => ({
       },
     })),
 
-  // Ward fill mode — off by default (outline only)
-  wardFillMode: false,
+  // Ward fill mode — enabled by default for rich flood hazard zones
+  wardFillMode: true,
   toggleWardFillMode: () => set((s) => ({ wardFillMode: !s.wardFillMode })),
 
   buildingMode: 'analytical',

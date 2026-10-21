@@ -133,7 +133,7 @@ export const mumbaiWards: Ward[] = [
     boundary: generateBoundary([72.843, 19.198], [72.850, 19.205]),
   },
   {
-    id: '13', name: 'M (Borivali)', code: 'M', center: [72.8565, 19.2307],
+    id: '13', name: 'M/E (Govandi / Mankhurd)', code: 'M/E', center: [72.8565, 19.2307],
     elevation: 22.1, twi: 5.98, urbanArea: 19.8, population: 380000,
     severity: 0, rainfall3day: 55, soilMoisture: 0.22, landSurfaceTemp: 31.8,
     wardType: 'highland',
@@ -142,7 +142,7 @@ export const mumbaiWards: Ward[] = [
     boundary: generateBoundary([72.853, 19.228], [72.861, 19.234]),
   },
   {
-    id: '14', name: 'N (Goregaon)', code: 'N', center: [72.8503, 19.1633],
+    id: '14', name: 'N (Goregaon / Ghatkopar)', code: 'N', center: [72.8503, 19.1633],
     elevation: 15.7, twi: 6.89, urbanArea: 16.9, population: 310000,
     severity: 0, rainfall3day: 75, soilMoisture: 0.27, landSurfaceTemp: 32.0,
     wardType: 'midland',
@@ -151,7 +151,7 @@ export const mumbaiWards: Ward[] = [
     boundary: generateBoundary([72.847, 19.160], [72.854, 19.167]),
   },
   {
-    id: '15', name: 'P/S (Malad)', code: 'P/S', center: [72.8421, 19.1793],
+    id: '15', name: 'P/S (Malad S)', code: 'P/S', center: [72.8421, 19.1793],
     elevation: 12.3, twi: 7.45, urbanArea: 17.2, population: 330000,
     severity: 0, rainfall3day: 82, soilMoisture: 0.30, landSurfaceTemp: 32.3,
     wardType: 'midland',
@@ -160,7 +160,7 @@ export const mumbaiWards: Ward[] = [
     boundary: generateBoundary([72.839, 19.176], [72.846, 19.183]),
   },
   {
-    id: '16', name: 'R/C (Bhandup)', code: 'R/C', center: [72.9372, 19.1532],
+    id: '16', name: 'R/C (Borivali / Bhandup)', code: 'R/C', center: [72.9372, 19.1532],
     elevation: 9.8, twi: 8.14, urbanArea: 13.5, population: 260000,
     severity: 1, rainfall3day: 145, soilMoisture: 0.44, landSurfaceTemp: 32.5,
     wardType: 'lowland',
@@ -169,7 +169,7 @@ export const mumbaiWards: Ward[] = [
     boundary: generateBoundary([72.934, 19.150], [72.941, 19.157]),
   },
   {
-    id: '17', name: 'R/N (Mulund)', code: 'R/N', center: [72.9483, 19.1785],
+    id: '17', name: 'R/N (Dahisar / Mulund)', code: 'R/N', center: [72.9483, 19.1785],
     elevation: 20.5, twi: 6.12, urbanArea: 14.1, population: 270000,
     severity: 0, rainfall3day: 62, soilMoisture: 0.24, landSurfaceTemp: 31.6,
     wardType: 'highland',
@@ -178,7 +178,7 @@ export const mumbaiWards: Ward[] = [
     boundary: generateBoundary([72.945, 19.176], [72.952, 19.182]),
   },
   {
-    id: '18', name: 'S (BKC)', code: 'S', center: [72.8658, 19.0689],
+    id: '18', name: 'S (Bhandup / BKC)', code: 'S', center: [72.8658, 19.0689],
     elevation: 12.1, twi: 7.08, urbanArea: 10.2, population: 180000,
     severity: 0, rainfall3day: 90, soilMoisture: 0.33, landSurfaceTemp: 32.8,
     wardType: 'midland',
@@ -187,7 +187,7 @@ export const mumbaiWards: Ward[] = [
     boundary: generateBoundary([72.863, 19.066], [72.870, 19.073]),
   },
   {
-    id: '19', name: 'T (Vikhroli)', code: 'T', center: [72.9228, 19.0762],
+    id: '19', name: 'T (Mulund / Vikhroli)', code: 'T', center: [72.9228, 19.0762],
     elevation: 8.1, twi: 8.62, urbanArea: 21.5, population: 390000,
     severity: 1, rainfall3day: 165, soilMoisture: 0.51, landSurfaceTemp: 32.3,
     wardType: 'lowland',
@@ -196,7 +196,7 @@ export const mumbaiWards: Ward[] = [
     boundary: generateBoundary([72.919, 19.073], [72.927, 19.080]),
   },
   {
-    id: '20', name: 'N/W (Juhu)', code: 'N/W', center: [72.8268, 19.0982],
+    id: '20', name: 'G/S (Worli / Lower Parel)', code: 'G/S', center: [72.8268, 19.0982],
     elevation: 5.8, twi: 9.28, urbanArea: 11.5, population: 195000,
     severity: 2, rainfall3day: 220, soilMoisture: 0.63, landSurfaceTemp: 31.4,
     wardType: 'coastal',
@@ -205,7 +205,7 @@ export const mumbaiWards: Ward[] = [
     boundary: generateBoundary([72.823, 19.095], [72.831, 19.102]),
   },
   {
-    id: '21', name: 'P/N (Vile Parle)', code: 'P/N', center: [72.8368, 19.1008],
+    id: '21', name: 'P/N (Malad N / Vile Parle)', code: 'P/N', center: [72.8368, 19.1008],
     elevation: 11.9, twi: 7.34, urbanArea: 13.8, population: 255000,
     severity: 0, rainfall3day: 78, soilMoisture: 0.29, landSurfaceTemp: 32.1,
     wardType: 'midland',
@@ -214,7 +214,7 @@ export const mumbaiWards: Ward[] = [
     boundary: generateBoundary([72.833, 19.098], [72.841, 19.104]),
   },
   {
-    id: '22', name: 'Dindoshi (Goregaon E)', code: 'DS', center: [72.8615, 19.1658],
+    id: '22', name: 'R/S (Kandivali)', code: 'R/S', center: [72.8615, 19.1658],
     elevation: 16.2, twi: 6.75, urbanArea: 15.8, population: 300000,
     severity: 0, rainfall3day: 70, soilMoisture: 0.26, landSurfaceTemp: 32.0,
     wardType: 'midland',
@@ -223,7 +223,7 @@ export const mumbaiWards: Ward[] = [
     boundary: generateBoundary([72.858, 19.163], [72.866, 19.169]),
   },
   {
-    id: '23', name: 'Shivadi', code: 'SH', center: [72.8468, 18.9532],
+    id: '23', name: 'F/S (Sewri / Parel)', code: 'F/S', center: [72.8468, 18.9532],
     elevation: 4.8, twi: 9.68, urbanArea: 10.8, population: 175000,
     severity: 2, rainfall3day: 200, soilMoisture: 0.58, landSurfaceTemp: 31.1,
     wardType: 'coastal',
@@ -232,7 +232,7 @@ export const mumbaiWards: Ward[] = [
     boundary: generateBoundary([72.844, 18.950], [72.851, 18.957]),
   },
   {
-    id: '24', name: 'Chembur', code: 'CH', center: [72.8908, 19.0538],
+    id: '24', name: 'M/W (Chembur)', code: 'M/W', center: [72.8908, 19.0538],
     elevation: 13.5, twi: 7.15, urbanArea: 14.9, population: 285000,
     severity: 1, rainfall3day: 125, soilMoisture: 0.39, landSurfaceTemp: 32.2,
     wardType: 'midland',

@@ -7,7 +7,8 @@
  * Otherwise falls back to local files under /public for offline dev.
  */
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const rawSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const SUPABASE_URL = rawSupabaseUrl.trim();
 const GIS_BUCKET = process.env.NEXT_PUBLIC_GIS_BUCKET || 'gis-data';
 
 /**
@@ -18,8 +19,12 @@ function supabasePublicUrl(path: string): string {
   return `${SUPABASE_URL}/storage/v1/object/public/${GIS_BUCKET}/${path}`;
 }
 
-/** True when Supabase Storage is configured via environment variables. */
-export const isRemoteEnabled = !!SUPABASE_URL;
+/** True ONLY when a valid, active remote Supabase Storage host is configured. */
+export const isRemoteEnabled = Boolean(
+  SUPABASE_URL &&
+  !SUPABASE_URL.includes('zeevfogyokaduczlqezw') &&
+  (SUPABASE_URL.startsWith('http://') || SUPABASE_URL.startsWith('https://'))
+);
 
 // ---------------------------------------------------------------------------
 // 3D Tiles

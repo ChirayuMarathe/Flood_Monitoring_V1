@@ -97,6 +97,7 @@ export default function CesiumMapView() {
         wardLayer.setCityVisible(c, c === activeCity);
       }
       setWardAnchors(wardLayer.getWardAnchors(activeCity as any));
+      wardLayer.updateFromProfiles(useFloodStore.getState().wardRiskProfiles);
       flyToCity(viewer, activeCity);
     }).catch(err => {
       console.warn(`[CesiumMapView] Failed to switch to city ${activeCity}:`, err);
@@ -312,7 +313,11 @@ export default function CesiumMapView() {
       
       wardLayer.setCityVisible(initialCity as any, true);
       setWardAnchors(wardLayer.getWardAnchors(initialCity as any));
-      useFloodStore.getState().initRiskData();
+      useFloodStore.getState().initRiskData().then(() => {
+        wardLayer.updateFromProfiles(useFloodStore.getState().wardRiskProfiles);
+      }).catch(() => {
+        wardLayer.updateFromProfiles(useFloodStore.getState().wardRiskProfiles);
+      });
     }).catch(err => console.error('[CesiumMapView] Ward layer load failed:', err));
     
     // Fly to initial city

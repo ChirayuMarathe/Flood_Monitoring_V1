@@ -14,8 +14,8 @@ import { useState } from 'react';
 import { Logo } from './Logo';
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/map', label: 'Live Map', icon: Map, live: true },
+  { href: '/map', label: 'Live 3D Map', icon: Map, live: true },
+  { href: '/dashboard', label: 'Analytics Dashboard', icon: LayoutDashboard },
   { href: '/alerts', label: 'Alerts', icon: AlertTriangle, badgeCount: true },
   { href: '#wards', label: 'Wards', icon: Building2, expandable: true },
   { href: '/reports', label: 'Reports', icon: FileText },
@@ -89,9 +89,7 @@ export default function AppSidebar() {
       {/* Navigation Links */}
       <nav className="flex-1 px-3 pt-3 space-y-1 overflow-y-auto custom-scrollbar">
         {navItems.map((item) => {
-          const isActive =
-            (item.href === '/dashboard' && item.label === 'Dashboard' && (pathname === '/dashboard' || pathname === '/')) ||
-            (item.href !== '/dashboard' && item.href !== '#wards' && pathname === item.href);
+          const isActive = item.href !== '#wards' && pathname === item.href;
           const Icon = item.icon;
 
           // Handle expandable "Wards" item
