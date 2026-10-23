@@ -19,7 +19,7 @@ import { feature as turfFeature, featureCollection } from '@turf/helpers';
 // Expected feature counts per city
 const EXPECTED_COUNTS: Record<string, number> = {
   mumbai: 24,
-  pune: 58,
+  pune: 15,
   navi_mumbai: 111,
 };
 
@@ -133,26 +133,55 @@ function normalizeProperties(city: string, props: Record<string, any>): Record<s
 
   switch (city) {
     case 'mumbai': {
-      // Mumbai uses NAME2 for ward code (e.g., "G/S\n") and OBJECTID for sequence
-      const rawName = (props.NAME2 || props.Name || 'Unknown').toString().trim();
+      // Mumbai uses NAME2 for ward code (e.g., "G/S\n", "A", "B", "K/W")
+      let rawName = (props.NAME2 || props.Name || props.ward || props.name || '').toString().trim();
+      const objId = props.OBJECTID !== undefined ? String(props.OBJECTID).trim() : '';
+
+      const MUMBAI_OBJECTID_MAP: Record<string, string> = {
+        '1': 'G/S', '2': 'F/N', '3': 'M/W', '4': 'H/W', '5': 'G/N', '6': 'M/E',
+        '7': 'E', '8': 'H/E', '9': 'R/S', '10': 'T', '11': 'N', '12': 'P/S',
+        '13': 'P/N', '14': 'B', '15': 'R/C', '16': 'K/E', '17': 'L', '18': 'S',
+        '19': 'R/N', '20': 'K/W', '21': 'A', '22': 'C', '23': 'D', '24': 'F/S',
+      };
+
+      if ((!rawName || !isNaN(Number(rawName))) && objId && MUMBAI_OBJECTID_MAP[objId]) {
+        rawName = MUMBAI_OBJECTID_MAP[objId];
+      } else if (!isNaN(Number(rawName)) && MUMBAI_OBJECTID_MAP[rawName]) {
+        rawName = MUMBAI_OBJECTID_MAP[rawName];
+      } else if (!rawName && objId) {
+        rawName = MUMBAI_OBJECTID_MAP[objId] || objId;
+      } else if (!rawName) {
+        rawName = 'Unknown';
+      }
+
       wardCode = rawName;
       wardName = rawName;
-      wardId = `mumbai_${props.OBJECTID || wardCode}`;
+      wardId = `mumbai_${wardCode}`;
       break;
     }
     case 'pune': {
-      // Pune uses wardnum (1-58) and Name2 for area name (e.g., "Dhanori - Vishrantwadi")
-      const num = props.wardnum || 0;
-      wardCode = num.toString().padStart(2, '0');
-      wardName = (props.Name2 || props.Name1 || `Ward ${wardCode}`).toString().trim();
-      wardId = `pune_${num}`;
+      // Pune: 15 official PMC administrative wards (Admin Ward 01..15)
+      const adminMatch = typeof props.name === 'string' ? props.name.match(/Admin Ward\s+(\d+)\s*(.*)/i) : null;
+      if (adminMatch) {
+        const num = parseInt(adminMatch[1], 10);
+        wardCode = `P${num.toString().padStart(2, '0')}`;
+        wardName = adminMatch[2].trim() || `Admin Ward ${num}`;
+        wardId = `pune_p${num}`;
+      } else {
+        const rawName = (props.name || props.Name || 'Unknown').toString().trim();
+        wardCode = rawName;
+        wardName = rawName;
+        wardId = `pune_${wardCode}`;
+      }
       break;
     }
     case 'navi_mumbai': {
       // Navi Mumbai uses sourcewardcode (e.g., "24") and ward_lgd_name
-      const code = (props.sourcewardcode || '0').toString();
+      const rawCode = (props.sourcewardcode || props.ward_lgd_name || props.OBJECTID || '0').toString();
+      const numMatch = rawCode.match(/\d+/);
+      const code = numMatch ? numMatch[0] : rawCode;
       wardCode = code;
-      wardName = `Ward No.${code}`;
+      wardName = props.ward_lgd_name ? String(props.ward_lgd_name).trim() : `Ward No.${code}`;
       wardId = `navi_mumbai_${code}`;
       break;
     }

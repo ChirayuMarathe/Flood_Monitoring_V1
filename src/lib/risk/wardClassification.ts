@@ -56,24 +56,24 @@ export const MUMBAI_CLASSIFICATIONS: WardClassification[] = [
 // ==================================================================
 // 2. Pune Wards (15 Administrative Zones)
 // All Pune zones are inland (zero coastal Arabian sea tides).
-// Key hydrological hazard is Mula, Mutha, and Mula-Mutha river corridors.
+// Key hydrological hazard is Mula, Mutha, Mula-Mutha river corridors, Ambil Odha, and nala basins.
 // ==================================================================
 export const PUNE_CLASSIFICATIONS: WardClassification[] = [
-  { wardId: 'p1',  wardCode: 'SN', isCoastal: false, nearRiver: true,  riverName: 'Mula-Mutha Confluence' }, // Shivajinagar
-  { wardId: 'p2',  wardCode: 'KT', isCoastal: false, nearRiver: false, riverName: null },                   // Kothrud (highland)
-  { wardId: 'p3',  wardCode: 'HD', isCoastal: false, nearRiver: true,  riverName: 'Mula-Mutha Basin' },      // Hadapsar (critical basin)
-  { wardId: 'p4',  wardCode: 'HJ', isCoastal: false, nearRiver: false, riverName: null },                   // Hinjewadi (ridge plateau)
-  { wardId: 'p5',  wardCode: 'BN', isCoastal: false, nearRiver: true,  riverName: 'Ram Nadi Corridor' },     // Baner
-  { wardId: 'p6',  wardCode: 'KJ', isCoastal: false, nearRiver: true,  riverName: 'Katraj Lake Basin' },     // Katraj (lake catchment)
-  { wardId: 'p7',  wardCode: 'SR', isCoastal: false, nearRiver: true,  riverName: 'Mutha River Channel' },   // Sinhagad Road (dam discharge)
-  { wardId: 'p8',  wardCode: 'DG', isCoastal: false, nearRiver: true,  riverName: 'Mutha River Bank' },      // Deccan Gymkhana (low bridge zone)
-  { wardId: 'p9',  wardCode: 'KP', isCoastal: false, nearRiver: true,  riverName: 'Mula-Mutha River' },      // Koregaon Park
-  { wardId: 'p10', wardCode: 'VN', isCoastal: false, nearRiver: false, riverName: null },                   // Viman Nagar
-  { wardId: 'p11', wardCode: 'PC', isCoastal: false, nearRiver: true,  riverName: 'Pavana River' },          // Pimpri-Chinchwad
-  { wardId: 'p12', wardCode: 'WK', isCoastal: false, nearRiver: false, riverName: null },                   // Wakad (highland)
-  { wardId: 'p13', wardCode: 'MW', isCoastal: false, nearRiver: true,  riverName: 'Mula-Mutha River' },      // Mundhwa (chronic flood zone)
-  { wardId: 'p14', wardCode: 'WJ', isCoastal: false, nearRiver: true,  riverName: 'Mutha River Corridor' },  // Warje
-  { wardId: 'p15', wardCode: 'YW', isCoastal: false, nearRiver: true,  riverName: 'Mula-Mutha River' },      // Yerawada (flood embankment)
+  { wardId: 'p1',  wardCode: 'P01', isCoastal: false, nearRiver: true,  riverName: 'Mula River Basin' },         // Admin Ward 01 Aundh
+  { wardId: 'p2',  wardCode: 'P02', isCoastal: false, nearRiver: true,  riverName: 'Mutha River Channel' },      // Admin Ward 02 Ghole Road
+  { wardId: 'p3',  wardCode: 'P03', isCoastal: false, nearRiver: false, riverName: null },                       // Admin Ward 03 Kothrud Karveroad
+  { wardId: 'p4',  wardCode: 'P04', isCoastal: false, nearRiver: true,  riverName: 'Mutha River Corridor' },     // Admin Ward 04 Warje Karvenagar
+  { wardId: 'p5',  wardCode: 'P05', isCoastal: false, nearRiver: true,  riverName: 'Mula-Mutha Confluence' },    // Admin Ward 05 Dhole Patil Rd
+  { wardId: 'p6',  wardCode: 'P06', isCoastal: false, nearRiver: true,  riverName: 'Mula-Mutha River Bank' },    // Admin Ward 06 Yerawda - Sangamwadi
+  { wardId: 'p7',  wardCode: 'P07', isCoastal: false, nearRiver: false, riverName: null },                       // Admin Ward 07 Nagar Road
+  { wardId: 'p8',  wardCode: 'P08', isCoastal: false, nearRiver: true,  riverName: 'Nagzari Nala / Mutha' },     // Admin Ward 08 Kasba - Vishrambaugwada
+  { wardId: 'p9',  wardCode: 'P09', isCoastal: false, nearRiver: true,  riverName: 'Ambil Odha Channel' },       // Admin Ward 09 Tilak Road
+  { wardId: 'p10', wardCode: 'P10', isCoastal: false, nearRiver: true,  riverName: 'Ambil Odha Stream' },        // Admin Ward 10 Sahakarnagar
+  { wardId: 'p11', wardCode: 'P11', isCoastal: false, nearRiver: false, riverName: null },                       // Admin Ward 11 Bibwewadi
+  { wardId: 'p12', wardCode: 'P12', isCoastal: false, nearRiver: false, riverName: null },                       // Admin Ward 12 Bhavani Peth
+  { wardId: 'p13', wardCode: 'P13', isCoastal: false, nearRiver: true,  riverName: 'Mula-Mutha Basin' },         // Admin Ward 13 Hadapsar
+  { wardId: 'p14', wardCode: 'P14', isCoastal: false, nearRiver: true,  riverName: 'Katraj Lake Basin' },        // Admin Ward 14 Dhankawadi
+  { wardId: 'p15', wardCode: 'P15', isCoastal: false, nearRiver: true,  riverName: 'Bhairoba Nala Basin' },      // Admin Ward 15 Kondhwa Wanavdi
 ];
 
 // ==================================================================

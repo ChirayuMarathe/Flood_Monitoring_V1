@@ -58,15 +58,15 @@ ${historicalNote}
 
 FORMAT YOUR RESPONSE EXACTLY AS FOLLOWS (Use Markdown):
 
-### 🚨 SITUATION ASSESSMENT
+### SITUATION ASSESSMENT
 Provide a concise, powerful 2-sentence executive summary analyzing current flood susceptibility in ${profile.wardName}, quoting the exact rainfall (${profile.rainfall3DaySum.toFixed(0)}mm) and soil moisture (${(profile.soilMoisture * 100).toFixed(0)}%).
 
-### ⚡ HYDROLOGIC RISK DRIVERS
+### HYDROLOGIC RISK DRIVERS
 * **Precipitation & Infiltration:** Analyze how the ${profile.rainfall3DaySum.toFixed(0)}mm rainfall and ${(profile.soilMoisture * 100).toFixed(0)}% soil saturation interact at ${profile.elevationMean.toFixed(1)}m elevation.
 * **Basin Vulnerability:** Evaluate topographic pooling (TWI ${profile.twiMean.toFixed(1)}) and primary hazard (${hazardTypeLabel(profile.primaryHazard)}).
 * **Historical Precedent:** ${historicalNote}
 
-### 🛡️ TACTICAL ACTION DIRECTIVES
+### TACTICAL ACTION DIRECTIVES
 1. **Pumps & Stormwater Drainage:** [Specific directive for dewatering pumps & culvert clearing for Severity ${profile.overallSeverity}]
 2. **Traffic & Low-Lying Subways:** [Advisory for subways/transit routes based on current risk]
 3. **Emergency Readiness Level:** [Declare readiness posture: Code Green (Normal) / Code Yellow (Watch) / Code Orange (Alert) / Code Red (Evacuation/Deploy)]

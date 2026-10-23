@@ -46,27 +46,23 @@ function safeInt(val: string | undefined): number {
   return isNaN(n) ? 0 : n;
 }
 
-/**
- * Safely fetches CSV text with automatic fallback to local /data/ path.
- */
-async function fetchCsvText(filename: string): Promise<string> {
-  const primaryUrl = climateDataUrl(filename);
-  const localUrl = `/data/${filename}`;
+async function fetchCSV(primaryUrl: string, filename: string): Promise<string> {
   try {
-    const res = await fetch(primaryUrl);
-    if (res.ok) return await res.text();
-    console.warn(`[dataLoader] Primary fetch returned ${res.status} for ${primaryUrl}, trying local fallback`);
+    const response = await fetch(primaryUrl);
+    if (!response.ok) throw new Error(`HTTP ${response.status} from ${primaryUrl}`);
+    return await response.text();
   } catch (err) {
-    console.warn(`[dataLoader] Primary fetch error for ${primaryUrl}, trying local fallback`);
+    const localUrl = `/data/${filename}`;
+    if (primaryUrl !== localUrl) {
+      console.warn(`[dataLoader] Failed to fetch ${primaryUrl}, falling back to ${localUrl}:`, err);
+      const fallbackResponse = await fetch(localUrl);
+      if (!fallbackResponse.ok) {
+        throw new Error(`Fallback HTTP ${fallbackResponse.status} from ${localUrl}`);
+      }
+      return await fallbackResponse.text();
+    }
+    throw err;
   }
-
-  try {
-    const localRes = await fetch(localUrl);
-    if (localRes.ok) return await localRes.text();
-  } catch (err) {
-    console.error(`[dataLoader] Local fallback fetch error for ${localUrl}:`, err);
-  }
-  return '';
 }
 
 /**
@@ -78,7 +74,7 @@ async function fetchCsvText(filename: string): Promise<string> {
  * flow_accumulation_max, twi_mean, twi_min, twi_max
  */
 export async function loadWardZonalStats(): Promise<Map<number, WardZonalStats>> {
-  const text = await fetchCsvText('ward_zonal_stats.csv');
+  const text = await fetchCSV(climateDataUrl('ward_zonal_stats.csv'), 'ward_zonal_stats.csv');
   const rows = parseCSV(text);
   
   const map = new Map<number, WardZonalStats>();
@@ -114,7 +110,7 @@ export async function loadWardZonalStats(): Promise<Map<number, WardZonalStats>>
  * CSV parsing issues — we handle this gracefully.
  */
 export async function loadTrainingTable(): Promise<TrainingTableRow[]> {
-  const text = await fetchCsvText('training_table_master.csv');
+  const text = await fetchCSV(climateDataUrl('training_table_master.csv'), 'training_table_master.csv');
   const rows = parseCSV(text);
   
   const result: TrainingTableRow[] = [];
@@ -164,7 +160,7 @@ export async function loadTrainingTable(): Promise<TrainingTableRow[]> {
  * rain_prev_day, rain_next_day
  */
 export async function loadClimateTimeSeries(): Promise<ClimateSnapshot[]> {
-  const text = await fetchCsvText('mumbai_climate_daily_avg.csv');
+  const text = await fetchCSV(climateDataUrl('mumbai_climate_daily_avg.csv'), 'mumbai_climate_daily_avg.csv');
   const rows = parseCSV(text);
   
   const result: ClimateSnapshot[] = [];

@@ -5,29 +5,49 @@ import * as Cesium from 'cesium';
 import {
   Viewer,
   Ion,
-  createOsmBuildingsAsync,
   UrlTemplateImageryProvider,
   Cartesian3,
   Math as CesiumMath,
   Color,
   SunLight,
-  CustomShader,
-  LightingModel,
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
   defined,
   Entity,
   ColorMaterialProperty,
 } from 'cesium';
-import { useFloodStore } from '@/store/flood-store';
+import { useFloodStore, getWardsForCity } from '@/store/flood-store';
 import { WardLayer } from '@/lib/gis/WardLayer';
-import { CITY_CENTERS } from '@/lib/gis/WardData';
-import { flyToCity, flyToWard, initCameraControls } from '@/lib/gis/cameraController';
+import { CITY_CENTERS, MUMBAI_OBJECTID_TO_CODE } from '@/lib/gis/WardData';
+import { flyToCity, flyToWard, initCameraControls, CITY_CAMERA_VIEWS } from '@/lib/gis/cameraController';
+import { wardProfileKey } from '@/lib/risk/WardRiskProfile';
+import wardTopography from '@/lib/ward-topography.json';
 
 const CESIUM_TOKEN = process.env.NEXT_PUBLIC_CESIUM_TOKEN || '';
 
-import { loadCityTileset, loadOsmBuildingsTileset } from '@/lib/gis/BuildingTileset';
+import { BuildingLayer } from '@/lib/gis/BuildingLayer';
 import WardTagLayer from './WardTagLayer';
+import { usePredictions } from '@/hooks/usePredictions';
+
+interface HoverWardDetails {
+  x: number;
+  y: number;
+  wardId: string;
+  wardCode: string;
+  wardName: string;
+  city: string;
+  rainfall3Day: number;
+  rainfallDaily?: number;
+  soilMoisture: number;
+  temp?: number;
+  susceptibility?: number;
+  elevation?: number;
+  twi?: number;
+  riskProb?: number;
+  rfProb?: number;
+  gbmProb?: number;
+  alertLevel?: string;
+}
 
 export default function CesiumMapView() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -35,13 +55,11 @@ export default function CesiumMapView() {
   const [loadingProgress, setLoadingProgress] = useState<number | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const wardLayerRef = useRef<WardLayer | null>(null);
+  const buildingLayerRef = useRef<BuildingLayer | null>(null);
   const handlerRef = useRef<ScreenSpaceEventHandler | null>(null);
-  const tilesetsRef = useRef<Map<string, Cesium.Cesium3DTileset>>(new Map());
-  const photorealRef = useRef<Cesium.Cesium3DTileset | null>(null);
-  const osmBuildingsRef = useRef<Cesium.Cesium3DTileset | null>(null);
   const initRef = useRef(false);
 
-  const [hoverInfo, setHoverInfo] = useState<{ x: number, y: number, name: string, city: string } | null>(null);
+  const [hoverInfo, setHoverInfo] = useState<HoverWardDetails | null>(null);
   const [wardAnchors, setWardAnchors] = useState<{ wardId: string; position: Cesium.Cartesian3 }[]>([]);
 
   const activeCity = useFloodStore((s) => s.activeCity);
@@ -50,124 +68,68 @@ export default function CesiumMapView() {
   const wardRiskProfiles = useFloodStore((s) => s.wardRiskProfiles);
   const buildingMode = useFloodStore((s) => s.buildingMode);
   const ragPanelOpen = useFloodStore((s) => s.ragPanelOpen);
+  const currentTimeData = useFloodStore((s) => s.currentTimeData);
+  const td = currentTimeData ? currentTimeData() : null;
+  const rainfallMax = td?.rainfall_3day_sum ?? 0;
+  const soilMoisture = td?.soil_moisture ?? 0.3;
+  const { wardMap, snapshot } = usePredictions(rainfallMax, soilMoisture);
 
-  // Helper to clip the tileset to the selected ward only (removes all external analytical buildings)
-  const applyBuildingClipping = useCallback(() => {
-    const tileset = tilesetsRef.current.get(activeCity) || osmBuildingsRef.current;
-    const wardLayer = wardLayerRef.current;
-    if (!tileset) return;
+  const wardMapRef = useRef(wardMap);
+  wardMapRef.current = wardMap;
+  const tdRef = useRef(td);
+  tdRef.current = td;
 
-    if (buildingMode === 'off') {
-      tileset.show = false;
-      tileset.clippingPolygons = undefined as any;
-      return;
-    }
 
-    if (selectedWardId) {
-      const positions = wardLayer?.getWardBoundaryPositions(selectedWardId);
-      if (positions && positions.length >= 3) {
-        tileset.clippingPolygons = new Cesium.ClippingPolygonCollection({
-          polygons: [new Cesium.ClippingPolygon({ positions })],
-          inverse: true, // preserves ONLY buildings inside the ward boundary, clips all others
-          quality: 1.0,
-        });
-        tileset.show = true;
-        return;
-      }
-    }
-
-    // When no specific ward is selected, show buildings for the city
-    tileset.clippingPolygons = undefined as any;
-    tileset.show = true;
-  }, [activeCity, selectedWardId, buildingMode]);
-
-  useEffect(() => {
-    applyBuildingClipping();
-  }, [applyBuildingClipping]);
-
-  // Handle city switching — fly camera to new city and ensure ONLY active city's wards are visible
+  // Handle city switching — fly camera immediately to new city and ensure ONLY active city's wards are visible
   useEffect(() => {
     const viewer = viewerRef.current;
     const wardLayer = wardLayerRef.current;
-    if (!viewer || !wardLayer || !activeCity || !mapReady) return;
+    if (!viewer || !activeCity || !mapReady) return;
 
-    wardLayer.loadCity(activeCity as any).then(() => {
-      // Only make the active city visible, hide all other cities to eliminate extra load
+    setHoverInfo(null);
+
+    // Immediately trigger camera fly-to so navigation feels instantaneous
+    flyToCity(viewer, activeCity);
+
+    if (wardLayer) {
+      // Mark all other cities as hidden and active city visible
       for (const c of ['mumbai', 'pune', 'navi_mumbai'] as const) {
         wardLayer.setCityVisible(c, c === activeCity);
       }
-      setWardAnchors(wardLayer.getWardAnchors(activeCity as any));
-      wardLayer.updateFromProfiles(useFloodStore.getState().wardRiskProfiles);
-      flyToCity(viewer, activeCity);
-    }).catch(err => {
-      console.warn(`[CesiumMapView] Failed to switch to city ${activeCity}:`, err);
-    });
+
+      wardLayer.loadCity(activeCity as any).then(() => {
+        // Enforce visibility again once loaded
+        for (const c of ['mumbai', 'pune', 'navi_mumbai'] as const) {
+          wardLayer.setCityVisible(c, c === activeCity);
+        }
+        setWardAnchors(wardLayer.getWardAnchors(activeCity as any));
+      }).catch(err => {
+        console.warn(`[CesiumMapView] Failed to switch to city ${activeCity}:`, err);
+      });
+    }
   }, [activeCity, mapReady]);
 
-  // Ward-specific local building layer: loads strictly the active city's local tileset
-  // and dynamically clips to only the selected ward
+  // 3D Extruded Digital Twin Buildings Layer
   useEffect(() => {
-    let cancelled = false;
-    const viewer = viewerRef.current;
-    if (!viewer || !mapReady) return;
-
-    // The globe is ALWAYS visible so terrain and satellite imagery remain crystal clear
-    viewer.scene.globe.show = true;
-
-    if (photorealRef.current) photorealRef.current.show = false;
-    if (osmBuildingsRef.current) osmBuildingsRef.current.show = false;
+    const buildingLayer = buildingLayerRef.current;
+    if (!buildingLayer || !mapReady) return;
 
     if (buildingMode === 'off') {
-      for (const ts of tilesetsRef.current.values()) ts.show = false;
+      buildingLayer.setVisible(false);
       setLoadingProgress(null);
       return;
     }
 
-    if (tilesetsRef.current.has(activeCity)) {
-      applyBuildingClipping();
-      return;
-    }
-
-    loadCityTileset(viewer, activeCity, {
-      onProgress: (pending, processing) => {
-        if (cancelled) return;
-        const outstanding = pending + processing;
-        if (outstanding === 0) {
-          setLoadingProgress(100);
-          setTimeout(() => { if (!cancelled) setLoadingProgress(null); }, 400);
-        } else {
-          setLoadingProgress(Math.max(5, 100 - outstanding * 4));
-        }
-      },
-    }).then(async (localTileset) => {
-      if (cancelled) return;
+    buildingLayer.setVisible(true);
+    setLoadingProgress(50);
+    buildingLayer.loadCityBuildings(activeCity).then(() => {
+      setLoadingProgress(100);
+      setTimeout(() => setLoadingProgress(null), 300);
+    }).catch(err => {
+      console.warn(`[Buildings] Failed to load 3D buildings for ${activeCity}:`, err);
       setLoadingProgress(null);
-      if (localTileset) {
-        console.log(`[Buildings] Local ward 3D tiles for '${activeCity}' loaded successfully`);
-        tilesetsRef.current.set(activeCity, localTileset);
-        applyBuildingClipping();
-      } else {
-        console.log(`[Buildings] Local tiles not available, loading Cesium OSM Buildings for ${activeCity}`);
-        const osmTs = await loadOsmBuildingsTileset(viewer);
-        if (cancelled || !osmTs) return;
-        osmBuildingsRef.current = osmTs;
-        tilesetsRef.current.set(activeCity, osmTs);
-        applyBuildingClipping();
-      }
-    }).catch(async (err) => {
-      if (!cancelled) {
-        console.warn(`[Buildings] Local tileset error, attempting OSM Buildings fallback:`, err);
-        setLoadingProgress(null);
-        const osmTs = await loadOsmBuildingsTileset(viewer);
-        if (cancelled || !osmTs) return;
-        osmBuildingsRef.current = osmTs;
-        tilesetsRef.current.set(activeCity, osmTs);
-        applyBuildingClipping();
-      }
     });
-
-    return () => { cancelled = true; };
-  }, [buildingMode, activeCity, mapReady, applyBuildingClipping]);
+  }, [buildingMode, activeCity, mapReady]);
 
   // React to ward selection (pinned wards, ward clicks in sidebar)
   const getSelectedWard = useFloodStore((s) => s.selectedWard);
@@ -195,13 +157,17 @@ export default function CesiumMapView() {
     wardLayer.setCityVisible('navi_mumbai', wardLayerVisibility.navi_mumbai);
   }, [wardLayerVisibility]);
 
-  // React to risk profile changes and update map pins
+  // React to ML predictions and risk profile changes
   useEffect(() => {
     const wardLayer = wardLayerRef.current;
-    if (!wardLayer) return;
-    
-    wardLayer.updateFromProfiles(wardRiskProfiles);
-  }, [wardRiskProfiles, mapReady]); // Depend on mapReady to ensure initial severities are painted when ward layers finish loading
+    if (!wardLayer || !mapReady) return;
+
+    if (wardMap && wardMap.size > 0) {
+      wardLayer.updateFromPredictions(wardMap);
+    } else {
+      wardLayer.updateFromProfiles(wardRiskProfiles);
+    }
+  }, [wardMap, wardRiskProfiles, mapReady]);
 
   // React to fill mode changes
   const wardFillMode = useFloodStore((s) => s.wardFillMode);
@@ -216,7 +182,6 @@ export default function CesiumMapView() {
   useEffect(() => {
     if (initRef.current || !containerRef.current || !CESIUM_TOKEN) return;
     initRef.current = true;
-    tilesetsRef.current.clear(); // old tilesets belong to the destroyed viewer
     let cancelled = false;
 
     (window as any).CESIUM_BASE_URL = '/cesium';
@@ -304,6 +269,10 @@ export default function CesiumMapView() {
     const wardLayer = new WardLayer(viewer);
     wardLayerRef.current = wardLayer;
 
+    // Initialize 3D Digital Twin Buildings Layer
+    const buildingLayer = new BuildingLayer(viewer);
+    buildingLayerRef.current = buildingLayer;
+
     const initialCity = useFloodStore.getState().activeCity || 'mumbai';
 
     // Fast path: load initial city first (<150ms) so map is interactive immediately
@@ -313,20 +282,16 @@ export default function CesiumMapView() {
       
       wardLayer.setCityVisible(initialCity as any, true);
       setWardAnchors(wardLayer.getWardAnchors(initialCity as any));
-      useFloodStore.getState().initRiskData().then(() => {
-        wardLayer.updateFromProfiles(useFloodStore.getState().wardRiskProfiles);
-      }).catch(() => {
-        wardLayer.updateFromProfiles(useFloodStore.getState().wardRiskProfiles);
-      });
+      useFloodStore.getState().initRiskData();
     }).catch(err => console.error('[CesiumMapView] Ward layer load failed:', err));
     
-    // Fly to initial city
-    const center = CITY_CENTERS[initialCity as keyof typeof CITY_CENTERS] || CITY_CENTERS.mumbai;
+    // Fly to initial city using CITY_CAMERA_VIEWS preset
+    const view = CITY_CAMERA_VIEWS[initialCity] || CITY_CAMERA_VIEWS.mumbai;
     viewer.camera.flyTo({
-      destination: Cartesian3.fromDegrees(center.lng, center.lat, center.altitude),
+      destination: Cartesian3.fromDegrees(view.lng, view.lat, view.altitude),
       orientation: {
-        heading: CesiumMath.toRadians(15.0),
-        pitch: CesiumMath.toRadians(-35.0), // 3D tilt
+        heading: CesiumMath.toRadians(view.heading || 0),
+        pitch: CesiumMath.toRadians(view.pitch || -38.0), // 3D tilt
         roll: 0,
       },
       duration: 0,
@@ -357,15 +322,117 @@ export default function CesiumMapView() {
         
         const info = wardLayer.getWardInfo(pickedEntity);
         if (info) {
+          const store = useFloodStore.getState();
+          const cleanKey = info.wardId.replace(/^(mumbai|pune|navi_mumbai)_/, '');
+          const bareKey = wardProfileKey(info.wardId);
+
+          const obs =
+            store.wardDailyObservations[info.wardCode] ||
+            store.wardDailyObservations[info.wardId] ||
+            store.wardDailyObservations[cleanKey] ||
+            store.wardDailyObservations[`BMC_${info.wardCode}`] ||
+            store.wardDailyObservations[`NMMC_${info.wardName}`] ||
+            store.wardDailyObservations[bareKey];
+
+          const profile =
+            store.wardRiskProfiles[info.wardId] ||
+            store.wardRiskProfiles[bareKey] ||
+            store.wardRiskProfiles[info.wardCode] ||
+            store.wardRiskProfiles[cleanKey];
+
+          const cityWards = getWardsForCity(info.city as any);
+          const resolvedCode = (info.city === 'mumbai' && MUMBAI_OBJECTID_TO_CODE[cleanKey])
+            ? MUMBAI_OBJECTID_TO_CODE[cleanKey]
+            : cleanKey;
+
+          const staticWard = cityWards.find((w) =>
+            w.id === info.wardId ||
+            w.code === info.wardCode ||
+            w.id === cleanKey ||
+            w.code === cleanKey ||
+            w.id === resolvedCode ||
+            w.code === resolvedCode ||
+            w.id === bareKey ||
+            w.code === bareKey ||
+            w.name.toLowerCase().startsWith(info.wardCode.toLowerCase() + ' ') ||
+            w.name.toLowerCase().startsWith(info.wardCode.toLowerCase() + ' (') ||
+            w.name.toLowerCase().startsWith(cleanKey.toLowerCase() + ' ') ||
+            w.name.toLowerCase().startsWith(cleanKey.toLowerCase() + ' (')
+          );
+
+          const currentMap = wardMapRef.current;
+          const pred =
+            currentMap.get(info.wardCode) ||
+            currentMap.get(info.wardId) ||
+            currentMap.get(cleanKey) ||
+            currentMap.get(resolvedCode) ||
+            (staticWard?.code ? currentMap.get(staticWard.code) : undefined) ||
+            (staticWard?.id ? currentMap.get(staticWard.id) : undefined) ||
+            currentMap.get(`BMC_${resolvedCode}`) ||
+            currentMap.get(`BMC_${info.wardCode}`) ||
+            currentMap.get(`mumbai_${resolvedCode}`) ||
+            currentMap.get(`mumbai_${info.wardCode}`) ||
+            currentMap.get(`navi_mumbai_${info.wardCode}`) ||
+            currentMap.get(`pune_${info.wardCode}`);
+
           const cityLabel = info.city === 'navi_mumbai' ? 'Navi Mumbai' : 
                            info.city.charAt(0).toUpperCase() + info.city.slice(1);
+
+          const topoMap = wardTopography as Record<string, any>;
+          const topo =
+            topoMap[info.wardId.toLowerCase()] ||
+            topoMap[cleanKey.toLowerCase()] ||
+            topoMap[info.wardName.toLowerCase()] ||
+            topoMap[info.wardCode.toLowerCase()] ||
+            topoMap[`${info.city}_${info.wardCode}`.toLowerCase()] ||
+            topoMap[`${info.city}_${cleanKey}`.toLowerCase()] ||
+            topoMap[`${info.city}_${info.wardName}`.toLowerCase()] ||
+            topoMap[`nmmc_${info.wardCode}`.toLowerCase()] ||
+            topoMap[`pune_${info.wardCode}`.toLowerCase()] ||
+            topoMap[`bmc_${info.wardCode}`.toLowerCase()];
+
+          const currentTime = tdRef.current;
+          const r3d = obs?.r3d ?? profile?.rainfall3DaySum ?? currentTime?.rainfall_3day_sum ?? 0;
+          const rDaily = obs?.rmax ?? currentTime?.rainfall_daily ?? (r3d / 3);
+          const soil = obs?.soil ?? profile?.soilMoisture ?? currentTime?.soil_moisture ?? 0.35;
+          const temp = obs?.temp ?? currentTime?.land_surface_temp ?? 26.5;
+          const susc = obs?.susc ?? topo?.susceptibility ?? 96.5;
+          const elevation = topo?.elevation ?? staticWard?.elevation ?? profile?.elevationMean ?? 5.5;
+          const twi = topo?.twi ?? staticWard?.twi ?? profile?.twiMean ?? 8.9;
+
+          const wardSev =
+            store.wardSeverities[info.wardId] ??
+            store.wardSeverities[info.wardCode] ??
+            store.wardSeverities[cleanKey] ??
+            profile?.overallSeverity;
+
+          let effectiveAlertLevel = pred?.alert_level || (wardSev === 3 ? 'critical' : wardSev === 2 ? 'red' : wardSev === 1 ? 'amber' : 'green');
+          if (wardSev === 3 && effectiveAlertLevel !== 'critical') {
+            effectiveAlertLevel = 'critical';
+          } else if (wardSev === 2 && (effectiveAlertLevel === 'green' || effectiveAlertLevel === 'amber')) {
+            effectiveAlertLevel = 'red';
+          } else if (wardSev === 1 && effectiveAlertLevel === 'green') {
+            effectiveAlertLevel = 'amber';
+          }
+
           setHoverInfo({
             x: movement.endPosition.x,
             y: movement.endPosition.y,
-            name: info.wardCode !== info.wardName 
-              ? `${info.wardCode} — ${info.wardName}` 
-              : info.wardName,
+            wardId: info.wardId,
+            wardCode: info.wardCode,
+            wardName: staticWard?.name || info.wardName,
             city: cityLabel,
+            rainfall3Day: r3d,
+            rainfallDaily: rDaily,
+            soilMoisture: soil,
+            temp,
+            susceptibility: susc,
+            elevation,
+            twi,
+            riskProb: pred ? pred.type3_prob : undefined,
+            rfProb: pred ? pred.rf_prob : undefined,
+            gbmProb: pred ? pred.gbm_prob : undefined,
+            alertLevel: effectiveAlertLevel,
           });
         }
       }
@@ -373,28 +440,79 @@ export default function CesiumMapView() {
 
     // Click Handler — select ward, emit to store
     handler.setInputAction((click: any) => {
-      const picked = viewer.scene.pick(click.position);
+      let targetEntity: Entity | null = null;
+      try {
+        const pickedObjects = viewer.scene.drillPick(click.position, 10);
+        for (const obj of pickedObjects) {
+          if (defined(obj) && obj.id instanceof Entity) {
+            let ent = obj.id;
+            if (ent.properties?.isWardBoundaryLine) {
+              const wid = ent.properties?.wardId?.getValue();
+              const poly = wid ? wardLayer.getWardPolygonEntity(wid) : null;
+              if (poly) ent = poly;
+            }
+            if (wardLayer.isWardEntity(ent)) {
+              targetEntity = ent;
+              break;
+            }
+          }
+        }
+      } catch {
+        // Fallback to single pick if drillPick is unsupported in current context
+      }
 
-      if (defined(picked) && picked.id instanceof Entity && wardLayer.isWardEntity(picked.id)) {
-        const info = wardLayer.selectWard(picked.id);
+      if (!targetEntity) {
+        const picked = viewer.scene.pick(click.position);
+        if (defined(picked) && picked.id instanceof Entity) {
+          let ent = picked.id;
+          if (ent.properties?.isWardBoundaryLine) {
+            const wid = ent.properties?.wardId?.getValue();
+            const poly = wid ? wardLayer.getWardPolygonEntity(wid) : null;
+            if (poly) ent = poly;
+          }
+          if (wardLayer.isWardEntity(ent)) {
+            targetEntity = ent;
+          }
+        }
+      }
+
+      if (targetEntity) {
+        const info = wardLayer.selectWard(targetEntity);
         if (info) {
+          const cityWards = getWardsForCity(info.city as any);
+          const cleanKey = info.wardId.replace(/^(mumbai|pune|navi_mumbai)_/, '');
+          const resolvedCode = (info.city === 'mumbai' && MUMBAI_OBJECTID_TO_CODE[cleanKey])
+            ? MUMBAI_OBJECTID_TO_CODE[cleanKey]
+            : cleanKey;
+          const cleanName = cleanKey.replace(/^Admin Ward\s+\d+\s*/i, '').trim().toLowerCase();
+          const staticWard = cityWards.find((w) =>
+            w.id === info.wardId ||
+            w.code === info.wardCode ||
+            w.id === cleanKey ||
+            w.code === cleanKey ||
+            w.id === resolvedCode ||
+            w.code === resolvedCode ||
+            w.name.toLowerCase() === cleanName ||
+            cleanKey.toLowerCase().includes(w.name.toLowerCase())
+          );
+          const resolvedName = staticWard?.name || info.wardName;
+          const targetWardId = staticWard?.id || resolvedCode || info.wardId;
+
           useFloodStore.getState().setSelectedBoundaryWard({
             city: info.city,
-            wardId: info.wardId,
-            wardName: info.wardName,
-            wardCode: info.wardCode,
+            wardId: targetWardId,
+            wardName: resolvedName,
+            wardCode: staticWard?.code || resolvedCode || info.wardCode,
           });
-          useFloodStore.getState().setSelectedWard(info.wardId);
+          useFloodStore.getState().setSelectedWard(targetWardId);
           useFloodStore.getState().clearRAGMessages();
           if (!useFloodStore.getState().ragPanelOpen) {
             useFloodStore.getState().toggleRAGPanel();
           }
         }
       } else {
-        // Click on empty space — clear selection
+        // Click on empty space — clear polygon highlight on map without wiping Emergency Terminal ward data
         wardLayer.clearSelection();
-        useFloodStore.getState().setSelectedBoundaryWard(null);
-        useFloodStore.getState().setSelectedWard(null);
       }
     }, ScreenSpaceEventType.LEFT_CLICK);
 
@@ -404,18 +522,7 @@ export default function CesiumMapView() {
       handlerRef.current?.removeInputAction(ScreenSpaceEventType.LEFT_CLICK);
       handlerRef.current?.destroy();
       wardLayerRef.current?.destroy();
-      for (const ts of tilesetsRef.current.values()) {
-        viewer.scene.primitives.remove(ts);
-      }
-      tilesetsRef.current.clear();
-      if (photorealRef.current) {
-        viewer.scene.primitives.remove(photorealRef.current);
-        photorealRef.current = null;
-      }
-      if (osmBuildingsRef.current) {
-        viewer.scene.primitives.remove(osmBuildingsRef.current);
-        osmBuildingsRef.current = null;
-      }
+      buildingLayerRef.current?.destroy();
       viewer.destroy();
       initRef.current = false;
     };
@@ -479,19 +586,119 @@ export default function CesiumMapView() {
         </button>
       )}
 
-      {mapReady && <WardTagLayer viewer={viewerRef.current} anchors={wardAnchors} />}
+      {mapReady && <WardTagLayer viewer={viewerRef.current} anchors={wardAnchors} wardMap={wardMap} />}
 
-      {/* Tooltip for Hover */}
+      {/* Comprehensive Dynamic Hover HUD Card with Full Decimals & All Key Factors */}
       {hoverInfo && (
         <div 
-          className="absolute pointer-events-none px-3 py-2 bg-[#0A0A0A]/85 backdrop-blur-md border border-[#ffffff1a] rounded-lg text-white text-sm whitespace-nowrap z-50 transition-opacity duration-75"
+          className="absolute pointer-events-none px-4 py-3 bg-black/95 backdrop-blur-2xl border border-white/20 rounded-2xl text-white shadow-[0_20px_50px_rgba(0,0,0,0.9)] z-50 min-w-[260px] max-w-[330px] transition-all duration-75 select-none"
           style={{ 
-            left: hoverInfo.x + 15, 
-            top: hoverInfo.y + 15 
+            left: Math.min(hoverInfo.x + 18, (typeof window !== 'undefined' ? window.innerWidth : 1200) - 350), 
+            top: Math.max(20, Math.min(hoverInfo.y - 40, (typeof window !== 'undefined' ? window.innerHeight : 800) - 290))
           }}
         >
-          <div className="font-medium text-[13px]">{hoverInfo.name}</div>
-          <div className="text-[10px] text-[#9CA3AF] mt-0.5">{hoverInfo.city}</div>
+          {/* Header */}
+          <div className="flex items-center justify-between pb-2 border-b border-white/10 gap-2">
+            <div>
+              <div className="font-bold text-[14px] text-white tracking-tight flex items-center gap-1.5 font-clash">
+                <span>{hoverInfo.wardName || hoverInfo.wardCode}</span>
+              </div>
+              <div className="text-[10px] text-zinc-500 font-mono">{hoverInfo.city}</div>
+            </div>
+            {hoverInfo.alertLevel && (
+              <span className={`text-[9px] px-2 py-0.5 rounded font-mono font-bold uppercase tracking-wider ${
+                hoverInfo.alertLevel === 'critical'
+                  ? 'bg-red-500/20 text-red-400 border border-red-500/40'
+                  : hoverInfo.alertLevel === 'red'
+                  ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40'
+                  : hoverInfo.alertLevel === 'amber'
+                  ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40'
+                  : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+              }`}>
+                {hoverInfo.alertLevel === 'red' ? 'ELEVATED' : hoverInfo.alertLevel === 'amber' ? 'WATCH' : hoverInfo.alertLevel === 'critical' ? 'CRITICAL' : 'NOMINAL'}
+              </span>
+            )}
+          </div>
+
+          {/* Metric Grid with exact decimal pointers */}
+          <div className="mt-2.5 space-y-1.5 text-[11px] font-mono">
+            {/* Rainfall 3-Day & Peak */}
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-400">
+                3-Day Rain:
+              </span>
+              <span className="font-bold text-white tabular-nums">
+                {hoverInfo.rainfall3Day.toFixed(2)} mm
+              </span>
+            </div>
+
+            {hoverInfo.rainfallDaily !== undefined && (
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-400">
+                  Peak Daily Rain:
+                </span>
+                <span className="font-semibold text-zinc-200 tabular-nums">
+                  {hoverInfo.rainfallDaily.toFixed(2)} mm
+                </span>
+              </div>
+            )}
+
+            {/* Soil Moisture */}
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-400">
+                Soil Moisture:
+              </span>
+              <span className="font-semibold text-zinc-200 tabular-nums">
+                {hoverInfo.soilMoisture.toFixed(3)} ({(hoverInfo.soilMoisture * 100).toFixed(1)}%)
+              </span>
+            </div>
+
+            {/* Land Surface Temp */}
+            {hoverInfo.temp !== undefined && (
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-400">
+                  Surface Temp:
+                </span>
+                <span className="font-semibold text-zinc-300 tabular-nums">
+                  {hoverInfo.temp.toFixed(1)} °C
+                </span>
+              </div>
+            )}
+
+            {/* Topography: Elevation & TWI */}
+            <div className="flex items-center justify-between pt-1 border-t border-white/5">
+              <span className="text-zinc-400">
+                Elevation / TWI:
+              </span>
+              <span className="font-semibold text-zinc-300 tabular-nums">
+                {hoverInfo.elevation !== undefined ? `${hoverInfo.elevation.toFixed(1)}m` : '--'} · TWI {hoverInfo.twi !== undefined ? hoverInfo.twi.toFixed(2) : '--'}
+              </span>
+            </div>
+
+            {/* Susceptibility */}
+            {hoverInfo.susceptibility !== undefined && (
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-400">
+                  Susceptibility:
+                </span>
+                <span className="font-semibold text-zinc-300 tabular-nums">
+                  {hoverInfo.susceptibility.toFixed(2)} / 100
+                </span>
+              </div>
+            )}
+
+            {/* ML Ensemble Prediction */}
+            {hoverInfo.riskProb !== undefined && (
+              <div className="mt-2 pt-1.5 border-t border-white/10 flex items-center justify-between bg-white/[0.03] -mx-4 -mb-3 px-4 py-2 rounded-b-2xl">
+                <span className="text-[10px] text-zinc-400 font-semibold">
+                  ML Flood Risk:
+                </span>
+                <span className="text-[13px] font-bold text-white tabular-nums">
+                  {(hoverInfo.riskProb * 100).toFixed(2)}%
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

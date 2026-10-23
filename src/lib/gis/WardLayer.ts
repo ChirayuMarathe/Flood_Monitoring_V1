@@ -27,11 +27,11 @@ import {
   Math as CesiumMath,
   ClassificationType,
   PolylineGraphics,
-  PolygonHierarchy,
 } from 'cesium';
 import { CITY_COLORS, extractNormalizedProperties, type NormalizedWardProperties } from './WardData';
 import { HazardPins } from './HazardPins';
 import { wardProfileKey, type WardRiskProfile } from '../risk/WardRiskProfile';
+import type { WardPrediction } from '../prediction-service';
 import { isRemoteEnabled, wardGeojsonUrl } from './gisUrlResolver';
 
 type CityKey = 'mumbai' | 'pune' | 'navi_mumbai';
@@ -40,9 +40,9 @@ const ALL_CITIES: CityKey[] = ['mumbai', 'pune', 'navi_mumbai'];
 
 // Label visibility thresholds (camera altitude in meters)
 const LABEL_THRESHOLDS = {
-  mumbai: { showCode: 30000, showName: 12000 },
-  pune: { showCode: 30000, showName: 12000 },
-  navi_mumbai: { showCode: 20000, showName: 6000 }, // Tighter thresholds for 111 wards
+  mumbai: { showCode: 35000, showName: 14000 },
+  pune: { showCode: 35000, showName: 14000 },
+  navi_mumbai: { showCode: 35000, showName: 14000 },
 };
 
 interface CityLayerData {
@@ -121,8 +121,11 @@ export class WardLayer {
   private wardPolygonEntities: Map<string, Entity> = new Map();
   private wardBoundaryPositions: Map<string, Cartesian3[]> = new Map();
   private wardLineEntities: Map<string, Entity[]> = new Map();
-  private wardWaterEntities: Map<string, Entity> = new Map();
-  private lastProfiles: Record<string, WardRiskProfile> = {};
+  private desiredVisibility: Map<CityKey, boolean> = new Map([
+    ['mumbai', true],
+    ['pune', false],
+    ['navi_mumbai', false],
+  ]);
 
   constructor(viewer: Viewer) {
     this.viewer = viewer;
@@ -144,6 +147,20 @@ export class WardLayer {
       this.wardBoundaryPositions.get(wardProfileKey(wardId)) ||
       this.wardBoundaryPositions.get(`mumbai_${wardId}`) ||
       this.wardBoundaryPositions.get(`mumbai_${wardProfileKey(wardId)}`) ||
+      null
+    );
+  }
+
+  /**
+   * Retrieves the polygon entity for a given ward ID.
+   */
+  public getWardPolygonEntity(wardId: string): Entity | null {
+    if (!wardId) return null;
+    return (
+      this.wardPolygonEntities.get(wardId) ||
+      this.wardPolygonEntities.get(wardProfileKey(wardId)) ||
+      this.wardPolygonEntities.get(`mumbai_${wardId}`) ||
+      this.wardPolygonEntities.get(`mumbai_${wardProfileKey(wardId)}`) ||
       null
     );
   }
@@ -179,37 +196,35 @@ export class WardLayer {
   public async loadCity(city: CityKey): Promise<void> {
     if (this.cityLayers.has(city)) return;
 
-    // When remote storage is configured, try remote first with immediate local fallback
-    const primaryUrl = isRemoteEnabled ? wardGeojsonUrl(city) : `/data/wards/${city}.geojson`;
-    let geojson: any = null;
+    // Always fetch normalized GeoJSON from local API route to ensure canonical ward codes and IDs
+    const apiUrl = `/api/wards/${city}`;
+    let source = 'API route';
 
+    // Fetch normalized GeoJSON with automatic local fallback
+    let response: Response;
     try {
-      const response = await fetch(primaryUrl);
-      if (response.ok) {
-        geojson = await response.json();
-      } else {
-        console.warn(`[WardLayer] Primary fetch returned ${response.status} for ${primaryUrl}`);
+      response = await fetch(apiUrl);
+      if (!response.ok) {
+        throw new Error(`${source} returned ${response.status} for ${city}`);
       }
-    } catch (err) {
-      console.warn(`[WardLayer] Primary fetch failed for ${city} from ${primaryUrl}, trying local fallback`);
-    }
-
-    if (!geojson) {
-      try {
-        const localRes = await fetch(`/data/wards/${city}.geojson`);
-        if (localRes.ok) {
-          geojson = await localRes.json();
-        } else {
-          const apiRes = await fetch(`/api/wards/${city}`);
-          if (apiRes.ok) geojson = await apiRes.json();
+    } catch (fetchErr) {
+      if (isRemoteEnabled) {
+        console.warn(`[WardLayer] Failed to fetch from ${source}, falling back to local API route:`, fetchErr);
+        response = await fetch(`/api/wards/${city}`);
+        if (!response.ok) {
+          throw new Error(`Fallback local API route returned ${response.status} for ${city}`);
         }
-      } catch (err) {
-        console.error(`[WardLayer] Fallback fetch also failed for ${city}:`, err);
+        source = 'API route (fallback)';
+      } else {
+        throw fetchErr;
       }
     }
+    const geojson = await response.json();
 
-    if (!geojson) {
-      throw new Error(`Failed to load ward GeoJSON for ${city}`);
+    if (source.includes('API route')) {
+      console.log(`[WardLayer] ${city} — wards: ${response.headers.get('X-Ward-Count')}, coords fixed: ${response.headers.get('X-Coords-Fixed')}, simplified: ${response.headers.get('X-Simplified')}`);
+    } else {
+      console.log(`[WardLayer] ${city} — loaded from ${source}`);
     }
 
     // 1. Build clamped-to-ground vector polyline outlines directly on Cesium terrain
@@ -217,23 +232,7 @@ export class WardLayer {
     const features = geojson.features || [];
     const lineEntities: Entity[] = [];
 
-    // Safety guard: ensure coordinates are in standard [longitude, latitude] order
-    function ensureLngLat(coords: any): any {
-      if (typeof coords[0] === 'number') {
-        if (coords[0] < 35 && coords[1] > 60) {
-          const s = [coords[1], coords[0]];
-          if (coords.length > 2) s.push(coords[2]);
-          return s;
-        }
-        return coords;
-      }
-      return coords.map(ensureLngLat);
-    }
-
     for (const feature of features) {
-      if (feature.geometry && feature.geometry.coordinates) {
-        feature.geometry.coordinates = ensureLngLat(feature.geometry.coordinates);
-      }
       const rawProps = feature.properties || {};
       const normalized = extractNormalizedProperties(rawProps);
       const geom = feature.geometry;
@@ -261,11 +260,8 @@ export class WardLayer {
           const cartPositions = Cartesian3.fromDegreesArray(flatOuter);
           this.wardBoundaryPositions.set(normalized.wardId, cartPositions);
           if (normalized.wardCode) {
-            const code = normalized.wardCode.trim();
-            this.wardBoundaryPositions.set(code, cartPositions);
-            this.wardBoundaryPositions.set(code.toUpperCase(), cartPositions);
-            this.wardBoundaryPositions.set(code.replace('/', ''), cartPositions);
-            this.wardBoundaryPositions.set(`${city}_${code}`, cartPositions);
+            this.wardBoundaryPositions.set(normalized.wardCode, cartPositions);
+            this.wardBoundaryPositions.set(`mumbai_${normalized.wardCode}`, cartPositions);
           }
           const bare = wardProfileKey(normalized.wardId);
           if (bare) this.wardBoundaryPositions.set(bare, cartPositions);
@@ -284,11 +280,11 @@ export class WardLayer {
               flatRing.push(simplified[0][0], simplified[0][1]);
             }
 
-            const outlineColor = Color.fromCssColorString('rgba(16, 185, 129, 0.85)');
+            const outlineColor = Color.fromCssColorString('rgba(255, 255, 255, 0.70)');
             const lineEntity = this.viewer.entities.add({
               polyline: {
                 positions: Cartesian3.fromDegreesArray(flatRing),
-                width: 2.5,
+                width: 2.0,
                 material: outlineColor,
                 clampToGround: true,
               },
@@ -302,23 +298,26 @@ export class WardLayer {
 
             lineEntities.push(lineEntity);
 
-            const registerLineKey = (key: string) => {
-              if (!this.wardLineEntities.has(key)) {
-                this.wardLineEntities.set(key, []);
-              }
-              this.wardLineEntities.get(key)!.push(lineEntity);
-            };
-
-            registerLineKey(normalized.wardId);
-            if (normalized.wardCode) {
-              const code = normalized.wardCode.trim();
-              registerLineKey(code);
-              registerLineKey(code.toUpperCase());
-              registerLineKey(code.replace('/', ''));
-              registerLineKey(`${city}_${code}`);
+            if (!this.wardLineEntities.has(normalized.wardId)) {
+              this.wardLineEntities.set(normalized.wardId, []);
             }
+            this.wardLineEntities.get(normalized.wardId)!.push(lineEntity);
+
+            if (normalized.wardCode) {
+              if (!this.wardLineEntities.has(normalized.wardCode)) {
+                this.wardLineEntities.set(normalized.wardCode, []);
+              }
+              this.wardLineEntities.get(normalized.wardCode)!.push(lineEntity);
+              if (!this.wardLineEntities.has(`mumbai_${normalized.wardCode}`)) {
+                this.wardLineEntities.set(`mumbai_${normalized.wardCode}`, []);
+              }
+              this.wardLineEntities.get(`mumbai_${normalized.wardCode}`)!.push(lineEntity);
+            }
+
             const bareKey = wardProfileKey(normalized.wardId);
-            if (bareKey) registerLineKey(bareKey);
+            if (bareKey && !this.wardLineEntities.has(bareKey)) {
+              this.wardLineEntities.set(bareKey, this.wardLineEntities.get(normalized.wardId)!);
+            }
           }
         }
       }
@@ -350,8 +349,8 @@ export class WardLayer {
 
       // Style the polygon with sleek frosted obsidian fill
       if (entity.polygon) {
-        const outlineColor = Color.fromCssColorString('rgba(16, 185, 129, 0.85)');
-        const fillColor = Color.fromCssColorString('rgba(16, 185, 129, 0.22)');
+        const outlineColor = Color.fromCssColorString('rgba(255, 255, 255, 0.70)');
+        const fillColor = Color.fromCssColorString('rgba(255, 255, 255, 0.08)');
         const fillMaterial = new ColorMaterialProperty(fillColor);
 
         entity.polygon.material = fillMaterial;
@@ -360,21 +359,13 @@ export class WardLayer {
         entity.polygon.perPositionHeight = undefined as any;
 
         entityMaterials.set(normalized.wardId, { fill: fillMaterial, outline: outlineColor });
-
-        const registerPolyKey = (key: string) => {
-          this.wardPolygonEntities.set(key, entity);
-        };
-
-        registerPolyKey(normalized.wardId);
+        this.wardPolygonEntities.set(normalized.wardId, entity);
         if (normalized.wardCode) {
-          const code = normalized.wardCode.trim();
-          registerPolyKey(code);
-          registerPolyKey(code.toUpperCase());
-          registerPolyKey(code.replace('/', ''));
-          registerPolyKey(`${city}_${code}`);
+          this.wardPolygonEntities.set(normalized.wardCode, entity);
+          this.wardPolygonEntities.set(`mumbai_${normalized.wardCode}`, entity);
         }
         const bare = wardProfileKey(normalized.wardId);
-        if (bare) registerPolyKey(bare);
+        if (bare) this.wardPolygonEntities.set(bare, entity);
       }
 
       // Create centroid label
@@ -385,10 +376,10 @@ export class WardLayer {
           position: centroid,
           label: {
             text: normalized.wardCode,
-            font: city === 'navi_mumbai' ? 'bold 11px sans-serif' : 'bold 13px sans-serif',
+            font: city === 'navi_mumbai' ? '11px sans-serif' : '13px sans-serif',
             fillColor: Color.WHITE,
             outlineColor: Color.BLACK,
-            outlineWidth: 3,
+            outlineWidth: 2,
             style: LabelStyle.FILL_AND_OUTLINE,
             verticalOrigin: VerticalOrigin.CENTER,
             horizontalOrigin: HorizontalOrigin.CENTER,
@@ -402,18 +393,30 @@ export class WardLayer {
               0.0
             ),
             distanceDisplayCondition: new DistanceDisplayCondition(0, thresholds.showCode),
-            pixelOffset: new Cartesian2(0, -25),
+            pixelOffset: new Cartesian2(0, -45),
           },
           properties: {
             wardLayerLabel: true,
             city: city,
             normalizedWardId: normalized.wardId,
-            normalizedWardCode: normalized.wardCode,
           } as any,
         });
 
         labelEntities.push(labelEntity);
       }
+    }
+
+    // Respect desired visibility (default to false unless explicitly requested or Mumbai)
+    const isVisible = this.desiredVisibility.has(city)
+      ? this.desiredVisibility.get(city)!
+      : (city === 'mumbai');
+
+    dataSource.show = isVisible;
+    for (const labelEntity of labelEntities) {
+      labelEntity.show = isVisible;
+    }
+    for (const lineEntity of lineEntities) {
+      lineEntity.show = isVisible;
     }
 
     // Add data source to viewer
@@ -424,7 +427,7 @@ export class WardLayer {
       dataSource,
       labelEntities,
       lineEntities,
-      visible: true,
+      visible: isVisible,
       entityMaterials,
     });
   }
@@ -463,6 +466,7 @@ export class WardLayer {
    * Toggle visibility of a specific city's ward layer.
    */
   setCityVisible(city: CityKey, visible: boolean): void {
+    this.desiredVisibility.set(city, visible);
     const layer = this.cityLayers.get(city);
     if (!layer) return;
 
@@ -474,11 +478,6 @@ export class WardLayer {
     }
     for (const lineEntity of layer.lineEntities) {
       lineEntity.show = visible;
-    }
-    for (const [wKey, water] of this.wardWaterEntities.entries()) {
-      if (!visible && (wKey.startsWith(city) || (city === 'mumbai' && !wKey.startsWith('pune') && !wKey.startsWith('navi_mumbai')))) {
-        water.show = false;
-      }
     }
   }
 
@@ -494,14 +493,46 @@ export class WardLayer {
     return result;
   }
 
+  // Static material & property cache to avoid GC churn & WebGL uniform rebinding on animation frames
+  private static cachedPredictionMaterials: Map<string, {
+    fill: ColorMaterialProperty;
+    outline: ColorMaterialProperty;
+    width: ConstantProperty;
+  }> = new Map();
+
+  private getPredictionMaterial(alertLevel: string, colorHex: string) {
+    const isCritical = alertLevel === 'critical' || alertLevel === 'profile_sev_3';
+    const isRed = alertLevel === 'red' || alertLevel === 'profile_sev_2';
+    const isAmber = alertLevel === 'amber' || alertLevel === 'profile_sev_1';
+
+    // Rich, high-impact opacities that dominate green satellite vegetation
+    const alpha = isCritical ? 0.62 : isRed ? 0.44 : isAmber ? 0.22 : 0.10;
+
+    // Unambiguous, vivid crimson for critical so it never looks yellow or muddy
+    const effectiveHex = isCritical ? '#EF4444' : isRed ? '#F97316' : isAmber ? '#FBBF24' : colorHex;
+
+    const key = `${alertLevel}_${effectiveHex}_${alpha}`;
+    let cached = WardLayer.cachedPredictionMaterials.get(key);
+    if (!cached) {
+      const baseColor = Color.fromCssColorString(effectiveHex);
+      const fillColor = baseColor.withAlpha(alpha);
+      const outlineWidth = isCritical ? 4.5 : isRed ? 3.0 : 2.0;
+
+      cached = {
+        fill: new ColorMaterialProperty(fillColor),
+        outline: new ColorMaterialProperty(baseColor),
+        width: new ConstantProperty(outlineWidth),
+      };
+      WardLayer.cachedPredictionMaterials.set(key, cached);
+    }
+    return cached;
+  }
+
   /**
    * Update the real ward polygon boundaries for all wards from their computed risk profiles.
-   * Dynamically adjusts polygon hazard glass, vector outlines, centroid badges, and 3D flood water prisms
-   * in real-time as the timeline scrubber advances.
+   * Eliminates the cylindrical circles and colors the actual administrative boundaries.
    */
   updateFromProfiles(profiles: Record<string, WardRiskProfile>): void {
-    this.lastProfiles = profiles;
-
     // 1. Ensure all cylinder ellipses are removed from centroid label entities
     for (const layer of this.cityLayers.values()) {
       for (const labelEntity of layer.labelEntities) {
@@ -512,166 +543,118 @@ export class WardLayer {
     }
 
     // 2. Dynamically style the ACTUAL WARD BOUNDARY POLYGONS & VECTOR POLYLINES
+    const seenEntities = new Set<Entity>();
+
     for (const [wardKey, entity] of this.wardPolygonEntities.entries()) {
-      if (!entity.polygon) continue;
+      if (!entity.polygon || seenEntities.has(entity)) continue;
+      seenEntities.add(entity);
 
-      const cleanKey = wardKey.replace(/\s+/g, '').toUpperCase();
-      const bareKey = wardProfileKey(wardKey);
-
-      let profile: WardRiskProfile | undefined =
+      const profile =
         profiles[wardKey] ||
-        profiles[cleanKey] ||
-        profiles[bareKey] ||
-        profiles[cleanKey.replace('/', '')] ||
+        profiles[wardProfileKey(wardKey)] ||
         profiles[`mumbai_${wardKey}`] ||
-        profiles[`mumbai_${cleanKey}`] ||
-        profiles[`mumbai_${bareKey}`] ||
-        profiles[`pune_${wardKey}`] ||
-        profiles[`navi_mumbai_${wardKey}`];
-
-      if (!profile) {
-        profile = Object.values(profiles).find(
-          (p) =>
-            p.wardId === wardKey ||
-            p.wardId === cleanKey ||
-            p.wardName?.toUpperCase().includes(cleanKey) ||
-            cleanKey.includes(p.wardId.toUpperCase())
-        );
-      }
-
+        profiles[`mumbai_${wardProfileKey(wardKey)}`];
       const sev = profile ? profile.overallSeverity : 0;
 
-      // Vivid flood risk zone styling:
-      // Critical (3): Crimson Alert Zone
-      // High (2): Amber Warning Zone
-      // Moderate (1): Tactical Blue Zone
-      // Low (0): Calm Emerald Glass
-      const alpha = this.fillMode ? 0.38 : 0.20;
-      const fillColor =
-        sev === 3 ? Color.fromCssColorString(`rgba(239, 68, 68, ${Math.min(0.70, alpha + 0.25)})`) :
-        sev === 2 ? Color.fromCssColorString(`rgba(245, 158, 11, ${Math.min(0.60, alpha + 0.18)})`) :
-        sev === 1 ? Color.fromCssColorString(`rgba(59, 130, 246, ${Math.min(0.50, alpha + 0.12)})`) :
-                    Color.fromCssColorString(`rgba(16, 185, 129, ${alpha})`);
+      if ((entity as any)._currentProfileSev === sev) {
+        continue;
+      }
+      (entity as any)._currentProfileSev = sev;
+      (entity as any)._currentAlertLevel = undefined; // allow prediction updates to re-apply
 
-      const outlineColor =
-        sev === 3 ? Color.fromCssColorString('#EF4444') :
-        sev === 2 ? Color.fromCssColorString('#F59E0B') :
-        sev === 1 ? Color.fromCssColorString('#3B82F6') :
-                    Color.fromCssColorString('rgba(16, 185, 129, 0.85)');
+      const colorHex =
+        sev === 3 ? '#EF4444' :
+        sev === 2 ? '#F59E0B' :
+        sev === 1 ? '#3B82F6' : '#10B981';
 
-      const outlineWidth = sev === 3 ? 5.0 : sev === 2 ? 4.0 : sev === 1 ? 3.0 : 2.5;
+      const mat = this.getPredictionMaterial(`profile_sev_${sev}`, colorHex);
 
       if (!this.selectedEntity || this.selectedEntity !== entity) {
-        entity.polygon.material = new ColorMaterialProperty(fillColor);
+        entity.polygon.material = mat.fill;
       }
 
       // Update vector polylines for crisp terrain outlines
       const lines =
         this.wardLineEntities.get(wardKey) ||
-        this.wardLineEntities.get(cleanKey) ||
-        this.wardLineEntities.get(bareKey) ||
-        this.wardLineEntities.get(`mumbai_${wardKey}`) ||
-        this.wardLineEntities.get(`mumbai_${cleanKey}`);
+        this.wardLineEntities.get(wardProfileKey(wardKey)) ||
+        this.wardLineEntities.get(`mumbai_${wardKey}`);
+      if (lines) {
+        for (const line of lines) {
+          if (line.polyline && (line as any)._currentProfileSev !== sev) {
+            line.polyline.material = mat.outline;
+            line.polyline.width = mat.width;
+            (line as any)._currentProfileSev = sev;
+          }
+        }
+      }
+    }
+  }
 
+  /**
+   * Update ward polygons directly from live AIDT ML predictions (Type 3 RF+GBM ensemble)
+   * with Profile A/B/C color mapping (Green -> Amber -> Red -> Critical).
+   */
+  updateFromPredictions(predictions: Map<string, WardPrediction>): void {
+    if (!predictions || predictions.size === 0) return;
+
+    const seenEntities = new Set<Entity>();
+    const entriesToUpdate: {
+      wardKey: string;
+      entity: Entity;
+      pred: WardPrediction;
+    }[] = [];
+
+    for (const [wardKey, entity] of this.wardPolygonEntities.entries()) {
+      if (!entity.polygon || seenEntities.has(entity)) continue;
+      seenEntities.add(entity);
+
+      const pred =
+        predictions.get(wardKey) ||
+        predictions.get(wardKey.replace(/^(mumbai|pune|navi_mumbai)_/, '')) ||
+        predictions.get(wardProfileKey(wardKey));
+
+      if (!pred) continue;
+
+      entriesToUpdate.push({ wardKey, entity, pred });
+    }
+
+    // Sort: green (0) -> amber (1) -> red (2) -> critical (3)
+    // Ensures critical boundaries & fills always render ON TOP of neighboring yellow borders
+    const severityRank: Record<string, number> = {
+      green: 0,
+      amber: 1,
+      red: 2,
+      critical: 3,
+    };
+
+    entriesToUpdate.sort(
+      (a, b) => (severityRank[a.pred.alert_level] ?? 0) - (severityRank[b.pred.alert_level] ?? 0)
+    );
+
+    for (const { wardKey, entity, pred } of entriesToUpdate) {
+      if ((entity as any)._currentAlertLevel === pred.alert_level) {
+        continue;
+      }
+      (entity as any)._currentAlertLevel = pred.alert_level;
+
+      const mat = this.getPredictionMaterial(pred.alert_level, pred.color);
+
+      if (entity.polygon && (!this.selectedEntity || this.selectedEntity !== entity)) {
+        entity.polygon.material = mat.fill;
+      }
+
+      const lines =
+        this.wardLineEntities.get(wardKey) ||
+        this.wardLineEntities.get(wardProfileKey(wardKey)) ||
+        this.wardLineEntities.get(`mumbai_${wardKey}`);
       if (lines) {
         for (const line of lines) {
           if (line.polyline) {
-            line.polyline.material = new ColorMaterialProperty(outlineColor);
-            line.polyline.width = new ConstantProperty(outlineWidth);
+            line.polyline.material = mat.outline;
+            line.polyline.width = mat.width;
+            (line as any)._currentAlertLevel = pred.alert_level;
           }
         }
-      }
-    }
-
-    // 3. Update centroid labels with dynamic severity status
-    for (const layer of this.cityLayers.values()) {
-      for (const labelEntity of layer.labelEntities) {
-        if (!labelEntity.label || !labelEntity.properties) continue;
-        const wardId = labelEntity.properties.getValue(this.viewer.clock.currentTime)?.normalizedWardId;
-        const wardCode = labelEntity.properties.getValue(this.viewer.clock.currentTime)?.normalizedWardCode || wardId;
-        if (!wardCode) continue;
-
-        const clean = wardCode.replace(/\s+/g, '').toUpperCase();
-        let profile: WardRiskProfile | undefined =
-          profiles[wardCode] ||
-          profiles[clean] ||
-          profiles[wardId] ||
-          profiles[wardProfileKey(wardId)];
-
-        if (!profile) {
-          profile = Object.values(profiles).find(
-            (p) => p.wardId === wardId || p.wardId === clean || p.wardName?.toUpperCase().includes(clean)
-          );
-        }
-
-        const sev = profile ? profile.overallSeverity : 0;
-        const sevText = sev === 3 ? 'CRITICAL' : sev === 2 ? 'ELEVATED' : sev === 1 ? 'WATCH' : 'NOMINAL';
-        const labelColor =
-          sev === 3 ? Color.fromCssColorString('#EF4444') :
-          sev === 2 ? Color.fromCssColorString('#F59E0B') :
-          sev === 1 ? Color.fromCssColorString('#60A5FA') :
-                      Color.fromCssColorString('#34D399');
-
-        labelEntity.label.text = new ConstantProperty(`${wardCode}\n[${sevText}]`);
-        labelEntity.label.fillColor = new ConstantProperty(labelColor);
-      }
-    }
-
-    // 4. Dynamic 3D Volumetric Flood Water Prisms (Rise with increasing timeline rainfall & severity)
-    for (const [wardKey, cartPositions] of this.wardBoundaryPositions.entries()) {
-      if (!cartPositions || cartPositions.length < 3) continue;
-
-      const cleanKey = wardKey.replace(/\s+/g, '').toUpperCase();
-      let profile: WardRiskProfile | undefined =
-        profiles[wardKey] ||
-        profiles[cleanKey] ||
-        profiles[wardProfileKey(wardKey)] ||
-        profiles[`mumbai_${wardKey}`] ||
-        profiles[`mumbai_${cleanKey}`];
-
-      if (!profile) {
-        profile = Object.values(profiles).find(
-          (p) => p.wardId === wardKey || p.wardId === cleanKey || p.wardName?.toUpperCase().includes(cleanKey)
-        );
-      }
-
-      const sev = profile ? profile.overallSeverity : 0;
-      const rain = profile ? profile.rainfall3DaySum : 0;
-
-      let waterEntity = this.wardWaterEntities.get(wardKey);
-
-      // Flood water becomes visibly extruded when there is elevated risk and rainfall
-      if (sev >= 1 && rain >= 40) {
-        // Dynamic water height scales seamlessly from 14m to 65m based on 3-day rainfall
-        const visualHeight = Math.min(75, 14 + (rain / 280) * 42 + sev * 6);
-
-        const waterColor =
-          sev === 3 ? Color.fromCssColorString('rgba(239, 68, 68, 0.44)') :   // Crimson Deluge
-          sev === 2 ? Color.fromCssColorString('rgba(245, 158, 11, 0.38)') :  // Amber Inundation
-                      Color.fromCssColorString('rgba(37, 99, 235, 0.32)');    // Blue Rising Tide
-
-        if (!waterEntity) {
-          waterEntity = this.viewer.entities.add({
-            polygon: {
-              hierarchy: new ConstantProperty(new PolygonHierarchy(cartPositions)),
-              extrudedHeight: new ConstantProperty(visualHeight),
-              perPositionHeight: false,
-              material: new ColorMaterialProperty(waterColor),
-              closeTop: true,
-              closeBottom: false,
-            },
-            properties: { isWardFloodWater: true, wardId: wardKey } as any,
-          });
-          this.wardWaterEntities.set(wardKey, waterEntity);
-        } else {
-          waterEntity.show = true;
-          if (waterEntity.polygon) {
-            waterEntity.polygon.extrudedHeight = new ConstantProperty(visualHeight);
-            waterEntity.polygon.material = new ColorMaterialProperty(waterColor);
-          }
-        }
-      } else if (waterEntity) {
-        waterEntity.show = false;
       }
     }
   }
@@ -683,13 +666,17 @@ export class WardLayer {
   getWardAnchors(city?: CityKey): { wardId: string; position: Cartesian3 }[] {
     const anchors: { wardId: string; position: Cartesian3 }[] = [];
     const time = this.viewer.clock.currentTime;
+    const seenWards = new Set<string>();
 
     for (const [key, layer] of this.cityLayers) {
       if (city && key !== city) continue;
       for (const labelEntity of layer.labelEntities) {
         const wardId = labelEntity.properties?.getValue(time)?.normalizedWardId;
         const position = labelEntity.position?.getValue(time);
-        if (wardId && position) anchors.push({ wardId, position });
+        if (wardId && position && !seenWards.has(wardId)) {
+          seenWards.add(wardId);
+          anchors.push({ wardId, position });
+        }
       }
     }
 
@@ -697,13 +684,30 @@ export class WardLayer {
   }
 
   /**
-   * Toggle fill mode (subtle glass vs saturated flood fill).
-   * Preserves calculated severity colors.
+   * Toggle fill mode (for future choropleth coloring).
+   * When enabled, ward polygons show a subtle fill color.
+   * When disabled, fill is near-transparent (outline only).
    */
   setFillMode(enabled: boolean): void {
     this.fillMode = enabled;
-    if (this.lastProfiles && Object.keys(this.lastProfiles).length > 0) {
-      this.updateFromProfiles(this.lastProfiles);
+
+    for (const [city, layer] of this.cityLayers) {
+      const colors = CITY_COLORS[city as CityKey];
+      const entities = layer.dataSource.entities.values;
+
+      for (const entity of entities) {
+        if (entity.polygon) {
+          if (enabled) {
+            entity.polygon.material = new ColorMaterialProperty(
+              new Color(colors.fillActive.r, colors.fillActive.g, colors.fillActive.b, colors.fillActive.a)
+            );
+          } else {
+            entity.polygon.material = new ColorMaterialProperty(
+              new Color(colors.fill.r, colors.fill.g, colors.fill.b, colors.fill.a)
+            );
+          }
+        }
+      }
     }
   }
 
@@ -857,10 +861,6 @@ export class WardLayer {
     for (const city of ALL_CITIES) {
       this.removeCityLayer(city);
     }
-    for (const water of this.wardWaterEntities.values()) {
-      this.viewer.entities.remove(water);
-    }
-    this.wardWaterEntities.clear();
     this.clearSelection();
     this.loadingPromise = null;
   }

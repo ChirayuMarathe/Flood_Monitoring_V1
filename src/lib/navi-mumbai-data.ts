@@ -1,6 +1,8 @@
 // Navi Mumbai Ward Data - Major Administrative Zones & Nodes with boundaries and flood metrics
 
 import { Ward } from './mumbai-data';
+import naviMumbai111Json from './navi-mumbai-111-wards.json';
+
 
 function generateBoundary(
   sw: [number, number],
@@ -65,7 +67,9 @@ function generateBuildings(
   return buildings;
 }
 
-export const naviMumbaiWards: Ward[] = [
+export const naviMumbaiWards: Ward[] = (naviMumbai111Json as unknown as Ward[]);
+
+export const legacyNaviMumbaiNodes: Ward[] = [
   {
     id: 'nm1', name: 'Vashi', code: 'VSH', center: [72.9984, 19.0771],
     elevation: 4.2, twi: 9.8, urbanArea: 14.2, population: 260000,

@@ -6,7 +6,15 @@ import { useFloodStore } from '@/store/flood-store';
 import { AnimatedNumber } from './AnimatedNumber';
 
 export default function WeatherWidget() {
-  const { rainfallMumbaiAvg, landSurfaceTemp } = useFloodStore();
+  const currentTimeData = useFloodStore((s) => s.currentTimeData);
+  const activeCity = useFloodStore((s) => s.activeCity);
+  const rainfallMumbaiAvg = useFloodStore((s) => s.rainfallMumbaiAvg);
+  const landSurfaceTemp = useFloodStore((s) => s.landSurfaceTemp);
+
+  const td = currentTimeData();
+  const rainfall = td?.rainfall_3day_sum ?? rainfallMumbaiAvg ?? 186.4;
+  const temp = td?.land_surface_temp ?? landSurfaceTemp ?? 26.5;
+  const cityLabel = activeCity === 'navi_mumbai' ? 'Navi Mumbai' : activeCity.charAt(0).toUpperCase() + activeCity.slice(1);
 
   return (
     <motion.div
@@ -17,17 +25,24 @@ export default function WeatherWidget() {
       style={{ pointerEvents: 'auto' }}
     >
       <div className="px-4 py-3 rounded-2xl bg-black/90 backdrop-blur-2xl border border-white/12 shadow-[0_16px_40px_rgba(0,0,0,0.8)]">
-        <div className="flex items-center gap-1.5 mb-2">
-          <Radio size={10} className="text-white animate-pulse" />
-          <span className="text-[9px] uppercase tracking-[0.14em] font-mono font-semibold text-[#8B919E]">Live Weather Telemetry</span>
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="flex items-center gap-1.5">
+            <Radio size={10} className="text-white animate-pulse" />
+            <span className="text-[9px] uppercase tracking-[0.14em] font-mono font-semibold text-[#8B919E]">
+              Weather Telemetry
+            </span>
+          </div>
+          <span className="text-[9px] font-mono uppercase tracking-wider text-zinc-400 bg-white/[0.06] px-1.5 py-0.5 rounded">
+            {cityLabel}
+          </span>
         </div>
         <div className="flex items-center gap-5">
           <div className="flex items-center gap-2">
             <CloudRain size={14} className="text-white" />
             <div>
-              <div className="text-[9px] text-[#8B919E] font-mono uppercase tracking-wider">Rainfall</div>
+              <div className="text-[9px] text-[#8B919E] font-mono uppercase tracking-wider">3-Day Rain</div>
               <div className="text-[16px] font-bold font-clash text-white leading-tight">
-                <AnimatedNumber value={rainfallMumbaiAvg} />
+                <AnimatedNumber value={Math.round(rainfall * 10) / 10} decimals={1} />
                 <span className="text-[10px] text-[#8B919E] ml-1 font-mono">mm</span>
               </div>
             </div>
@@ -38,7 +53,7 @@ export default function WeatherWidget() {
             <div>
               <div className="text-[9px] text-[#8B919E] font-mono uppercase tracking-wider">Surface Temp</div>
               <div className="text-[16px] font-bold font-clash text-white leading-tight">
-                <AnimatedNumber value={landSurfaceTemp} decimals={1} />
+                <AnimatedNumber value={Math.round(temp * 10) / 10} decimals={1} />
                 <span className="text-[10px] text-[#8B919E] ml-1 font-mono">°C</span>
               </div>
             </div>

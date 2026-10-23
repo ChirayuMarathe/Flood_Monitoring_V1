@@ -29,7 +29,9 @@ function FormattedProtocol({ content }: FormattedBlockProps) {
 
     // Section Headers
     if (trimmed.startsWith('###')) {
-      const headerText = trimmed.replace(/^###\s*/, '');
+      const rawHeaderText = trimmed.replace(/^###\s*/, '');
+      // Strip leading emojis and symbols (e.g., 🚨, ⚡, 🛡️, etc.)
+      const headerText = rawHeaderText.replace(/^[^\w\s]+/, '').trim();
       const isSituation = headerText.includes('SITUATION');
       const isDrivers = headerText.includes('HYDROLOGIC') || headerText.includes('DRIVERS');
       const isDirectives = headerText.includes('TACTICAL') || headerText.includes('DIRECTIVES');
@@ -49,7 +51,7 @@ function FormattedProtocol({ content }: FormattedBlockProps) {
 
       elements.push(
         <div key={`header-${idx}`} className="mt-3.5 mb-2">
-          <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border text-[11px] font-mono font-bold uppercase tracking-wider ${borderClass}`}>
+          <div className={`inline-flex items-center px-3 py-1 rounded-lg border text-[11px] font-mono font-bold uppercase tracking-wider ${borderClass}`}>
             <span>{headerText}</span>
           </div>
         </div>
@@ -136,9 +138,16 @@ export default function RAGTerminal() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const selectedBoundaryWard = useFloodStore((s) => s.selectedBoundaryWard);
   const ward = selectedWard();
   const severity = selectedWardId ? (wardSeverities[selectedWardId] ?? 0) : 0;
-  const profile = selectedWardId ? getWardRiskProfile(selectedWardId) : null;
+  const rawProfile = selectedWardId ? getWardRiskProfile(selectedWardId) : null;
+  const profile = rawProfile
+    ? {
+        ...rawProfile,
+        wardName: selectedBoundaryWard?.wardName || ward?.name || rawProfile.wardName,
+      }
+    : null;
 
   // When a user selects a ward, switch to Ward Intelligence tab
   useEffect(() => {
@@ -158,7 +167,7 @@ export default function RAGTerminal() {
     setRAGLoading(true);
     addRAGMessage({
       role: 'system',
-      content: `Alert initiated for ${ward?.name || 'Selected Ward'} — Severity ${severity}/3`,
+      content: `Alert initiated for ${selectedBoundaryWard?.wardName || ward?.name || 'Selected Ward'} — Severity ${severity}/3`,
     });
     try {
       const p = getWardRiskProfile(selectedWardId);
@@ -215,10 +224,10 @@ export default function RAGTerminal() {
   }, [criticalAlertVisible, selectedWardId, fetchAlert, ward, ragMessages.length]);
 
   const QUICK_PROMPTS = [
-    { label: '⏱️ Inundation ETA', query: 'What is the estimated time to threshold or inundation for this ward?' },
-    { label: '🚜 Dewatering Plan', query: 'What is the recommended pumping station and dewatering plan?' },
-    { label: '📜 Historical Analogue', query: 'How do current conditions compare to the worst historical flood event here?' },
-    { label: '🚨 Escalation Triggers', query: 'What specific trigger conditions would escalate this ward to the next severity level?' },
+    { label: 'Inundation ETA', query: 'What is the estimated time to threshold or inundation for this ward?' },
+    { label: 'Dewatering Plan', query: 'What is the recommended pumping station and dewatering plan?' },
+    { label: 'Historical Analogue', query: 'How do current conditions compare to the worst historical flood event here?' },
+    { label: 'Escalation Triggers', query: 'What specific trigger conditions would escalate this ward to the next severity level?' },
   ];
 
   return (
@@ -418,7 +427,6 @@ export default function RAGTerminal() {
                             {/* Protocol Header */}
                             <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-white/5 text-[10px] font-mono">
                               <div className="flex items-center gap-1.5 text-white font-semibold tracking-wider">
-                                <Sparkles size={11} />
                                 <span>MUNICIPAL TACTICAL PROTOCOL</span>
                               </div>
 

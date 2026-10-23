@@ -33,8 +33,8 @@ export default function AlertsPage() {
   const wardAlerts = useMemo(() => {
     return cityWards
       .map(w => {
-        const sev = wardSeverities[w.id] ?? 0;
-        const profile = wardRiskProfiles[w.id];
+        const sev = wardSeverities[w.id] ?? wardSeverities[w.code] ?? wardSeverities[`${activeCity}_${w.code}`] ?? wardSeverities[`${activeCity}_${w.id}`] ?? 0;
+        const profile = wardRiskProfiles[w.id] || wardRiskProfiles[w.code] || wardRiskProfiles[`${activeCity}_${w.code}`];
         return { ward: w, severity: sev, profile };
       })
       .filter(wa => {
@@ -49,11 +49,11 @@ export default function AlertsPage() {
         return wa.ward.name.toLowerCase().includes(q) || wa.ward.code.toLowerCase().includes(q);
       })
       .sort((a, b) => b.severity - a.severity);
-  }, [cityWards, wardSeverities, wardRiskProfiles, filterLevel, searchQuery]);
+  }, [cityWards, wardSeverities, wardRiskProfiles, filterLevel, searchQuery, activeCity]);
 
-  const criticalCount = cityWards.filter(w => (wardSeverities[w.id] ?? 0) >= 3).length;
-  const elevatedCount = cityWards.filter(w => (wardSeverities[w.id] ?? 0) >= 2).length;
-  const watchCount = cityWards.filter(w => (wardSeverities[w.id] ?? 0) >= 1).length;
+  const criticalCount = cityWards.filter(w => (wardSeverities[w.id] ?? wardSeverities[w.code] ?? wardSeverities[`${activeCity}_${w.code}`] ?? 0) >= 3).length;
+  const elevatedCount = cityWards.filter(w => (wardSeverities[w.id] ?? wardSeverities[w.code] ?? wardSeverities[`${activeCity}_${w.code}`] ?? 0) >= 2).length;
+  const watchCount = cityWards.filter(w => (wardSeverities[w.id] ?? wardSeverities[w.code] ?? wardSeverities[`${activeCity}_${w.code}`] ?? 0) >= 1).length;
   const totalAlerts = alertHistory.length;
 
   const filteredHistory = useMemo(() => {

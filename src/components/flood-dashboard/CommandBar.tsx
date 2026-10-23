@@ -12,10 +12,11 @@ export default function CommandBar() {
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const { setSelectedWard } = useFloodStore();
+  const { setSelectedWard, getActiveWards } = useFloodStore();
 
+  const currentWards = getActiveWards();
   const filtered = query.trim()
-    ? mumbaiWards.filter(
+    ? currentWards.filter(
         (w) =>
           w.name.toLowerCase().includes(query.toLowerCase()) ||
           w.code.toLowerCase().includes(query.toLowerCase())

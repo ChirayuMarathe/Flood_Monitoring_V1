@@ -1,20 +1,20 @@
 import * as Cesium from "cesium";
 
-// ---- Default camera views per city (tune these once, reuse everywhere) ----
+// ---- Default camera views per city (zoomed in close to wards) ----
 export const CITY_CAMERA_VIEWS: Record<
   string,
   { lng: number; lat: number; altitude: number; heading: number; pitch: number }
 > = {
-  mumbai: { lng: 72.8777, lat: 19.0760, altitude: 12000, heading: 0, pitch: -35 },
-  pune: { lng: 73.8567, lat: 18.5204, altitude: 14000, heading: 0, pitch: -40 }, // Higher altitude, steeper pitch for Pune hills
-  navi_mumbai: { lng: 73.0297, lat: 19.0330, altitude: 11000, heading: 0, pitch: -30 }, // Flatter layout
+  mumbai: { lng: 72.8550, lat: 19.0185, altitude: 5500, heading: 0, pitch: -50 }, // Centers on Bandra/Kurla/Dharavi core wards
+  pune: { lng: 73.8567, lat: 18.4842, altitude: 4800, heading: 0, pitch: -50 }, // Centers on Shaniwar Wada/Kasba/Shivajinagar wards
+  navi_mumbai: { lng: 73.0280, lat: 19.0050, altitude: 4800, heading: 0, pitch: -48 }, // Centers on CBD Belapur/Nerul/Vashi 3D building cluster
 };
 
-// Closer default for flying into an individual ward
-const WARD_ALTITUDE = 900;
-const WARD_PITCH = -40;
+// Close-up altitude for flying into an individual ward
+const WARD_ALTITUDE = 1200;
+const WARD_PITCH = -50;
 
-export function flyToCity(viewer: Cesium.Viewer, cityKey: string, duration = 2.5) {
+export function flyToCity(viewer: Cesium.Viewer, cityKey: string, duration = 2.0) {
   const view = CITY_CAMERA_VIEWS[cityKey];
   if (!view) {
     console.warn(`[camera] No camera preset for city: ${cityKey}`);
@@ -42,10 +42,14 @@ export function flyToWard(
   duration = 1.8
 ) {
   if (viewer.isDestroyed()) return;
+
+  // Offset camera slightly south so line-of-sight looks directly at the ward centroid
+  const latOffset = (WARD_ALTITUDE / Math.tan(Cesium.Math.toRadians(Math.abs(WARD_PITCH)))) / 111132;
+
   viewer.camera.flyTo({
     destination: Cesium.Cartesian3.fromDegrees(
       ward.centroidLng,
-      ward.centroidLat,
+      ward.centroidLat - latOffset,
       WARD_ALTITUDE
     ),
     orientation: {

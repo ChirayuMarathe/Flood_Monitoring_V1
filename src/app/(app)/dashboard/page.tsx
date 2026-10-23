@@ -13,6 +13,7 @@ const RainfallChart = dynamic(() => import('@/components/flood-dashboard/Rainfal
 const WardTable = dynamic(() => import('@/components/flood-dashboard/WardTable'), { ssr: false });
 const AlertsFeed = dynamic(() => import('@/components/flood-dashboard/AlertsFeed'), { ssr: false });
 const BottomPanel = dynamic(() => import('@/components/flood-dashboard/BottomPanel'), { ssr: false });
+const LiveRiskPanel = dynamic(() => import('@/components/flood-dashboard/LiveRiskPanel'), { ssr: false });
 
 export default function DashboardPage() {
   const { wardSeverities, currentTimeData, activeCity, switchCity, timeIndex } = useFloodStore();
@@ -238,6 +239,9 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* AIDT ML Live Inference Engine — Type 1 / 2 / 3 Telemetry */}
+        <LiveRiskPanel rainfallMax={td?.rainfall_3day_sum ?? 0} soilMoisture={td?.soil_moisture ?? 0.3} />
 
         {/* Table + Alerts Row */}
         <div className="grid grid-cols-3 gap-3">

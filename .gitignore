@@ -58,3 +58,10 @@ server.log
 /public/data/buildings/
 *.gpkg
 *.tif
+
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+

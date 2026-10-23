@@ -13,11 +13,13 @@ import {
   RotateCcw,
   History,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Sparkles,
 } from 'lucide-react';
 import { useFloodStore, getWardsForCity } from '@/store/flood-store';
 import { timeSeriesData } from '@/lib/mumbai-data';
-import { AVAILABLE_YEARS, MONTH_NAMES, NOTABLE_HISTORICAL_EVENTS } from '@/lib/climate-service';
+import { AVAILABLE_YEARS, DIGITAL_TWIN_YEARS, MONTH_NAMES, NOTABLE_HISTORICAL_EVENTS, getNotableHistoricalEvents, getYearPeakNote } from '@/lib/climate-service';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { AnimatedNumber } from './AnimatedNumber';
 
@@ -47,6 +49,7 @@ export default function BottomPanel({ mode = 'floating' }: BottomPanelProps) {
     setYear,
     setMonth,
     ragPanelOpen,
+    livePredictions,
   } = useFloodStore();
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -62,14 +65,37 @@ export default function BottomPanel({ mode = 'floating' }: BottomPanelProps) {
   const td = currentTimeData() || series[0];
 
   const cityWards = useMemo(() => getWardsForCity(activeCity), [activeCity]);
-  const criticalWardsCount = useMemo(
-    () => cityWards.filter((w) => (wardSeverities[w.id] ?? 0) >= 3).length,
-    [cityWards, wardSeverities]
-  );
-  const elevatedWardsCount = useMemo(
-    () => cityWards.filter((w) => (wardSeverities[w.id] ?? 0) === 2).length,
-    [cityWards, wardSeverities]
-  );
+
+  // Derive real critical & elevated counts directly from live AIDT ML predictions across all city wards
+  const { criticalWardsCount, elevatedWardsCount, totalWardsCount } = useMemo(() => {
+    const preds = Object.values(livePredictions);
+    const uniqueCityPreds = new Map<string, (typeof preds)[0]>();
+    for (const p of preds) {
+      if (p.city === activeCity && p.ward_uid) {
+        uniqueCityPreds.set(p.ward_uid, p);
+      }
+    }
+
+    if (uniqueCityPreds.size > 0) {
+      const all = Array.from(uniqueCityPreds.values());
+      const crit = all.filter((p) => p.alert_level === 'critical').length;
+      const elev = all.filter((p) => p.alert_level === 'red' || p.alert_level === 'amber').length;
+      return {
+        criticalWardsCount: crit,
+        elevatedWardsCount: elev,
+        totalWardsCount: all.length,
+      };
+    }
+
+    // Fallback to wardSeverities
+    const crit = cityWards.filter((w) => (wardSeverities[w.id] ?? 0) >= 3).length;
+    const elev = cityWards.filter((w) => (wardSeverities[w.id] ?? 0) === 2).length;
+    return {
+      criticalWardsCount: crit,
+      elevatedWardsCount: elev,
+      totalWardsCount: cityWards.length,
+    };
+  }, [livePredictions, activeCity, cityWards, wardSeverities]);
 
   // Close year dropdown when clicking outside
   useEffect(() => {
@@ -125,19 +151,24 @@ export default function BottomPanel({ mode = 'floating' }: BottomPanelProps) {
     return Math.max(...series.map((d) => d.rainfall_3day_sum), 1);
   }, [series]);
 
-  // Notable storms matching current year or general historical records
+  // Notable storms matching current city and selected year
   const relevantEvents = useMemo(() => {
-    const matchingYearEvents = NOTABLE_HISTORICAL_EVENTS.filter((e) => e.year === selectedYear);
-    if (matchingYearEvents.length > 0) return matchingYearEvents;
-    return NOTABLE_HISTORICAL_EVENTS.slice(0, 3);
-  }, [selectedYear]);
+    return getNotableHistoricalEvents(activeCity, selectedYear);
+  }, [activeCity, selectedYear]);
 
-  // Jump to specific storm date
+  // Jump to specific storm date (seamlessly handles cross-year transitions)
   const jumpToDate = (targetDate: string) => {
-    const idx = series.findIndex((d) => d.date === targetDate);
-    if (idx !== -1) {
-      setTimeIndex(idx);
+    const targetYear = parseInt(targetDate.slice(0, 4), 10);
+    if (!isNaN(targetYear) && targetYear !== selectedYear) {
+      setYear(targetYear);
     }
+    setTimeout(() => {
+      const currentSeries = useFloodStore.getState().activeTimeSeries;
+      const idx = currentSeries.findIndex((d) => d.date === targetDate);
+      if (idx !== -1) {
+        setTimeIndex(idx);
+      }
+    }, 60);
   };
 
   const containerClasses =
@@ -145,7 +176,7 @@ export default function BottomPanel({ mode = 'floating' }: BottomPanelProps) {
       ? `absolute bottom-5 z-20 pointer-events-auto transition-all duration-300 ${
           ragPanelOpen
             ? 'left-1/2 -translate-x-[calc(50%+130px)] w-[900px] max-w-[calc(100vw-450px-270px)]'
-            : 'left-1/2 -translate-x-1/2 w-[980px] max-w-[calc(100vw-300px)]'
+            : 'left-1/2 -translate-x-1/2 w-[980px] max-w-[calc(100vw-32px)]'
         }`
       : 'w-full relative z-10';
 
@@ -158,74 +189,147 @@ export default function BottomPanel({ mode = 'floating' }: BottomPanelProps) {
     >
       <div className="flex flex-col gap-2.5 p-4 rounded-2xl bg-black/95 backdrop-blur-2xl border border-white/15 shadow-[0_24px_64px_rgba(0,0,0,0.95),inset_0_1px_1px_rgba(255,255,255,0.06)] font-satoshi">
         
-        {/* ROW 1: Year & Month Selectors + Historical Fast Jumps */}
+        {/* ROW 1: Year Navigation & Month Selectors + Historical Fast Jumps */}
         <div className="flex items-center justify-between gap-2.5 text-xs pb-2 border-b border-white/10 overflow-hidden">
           <div className="flex items-center gap-2 flex-wrap min-w-0">
             
-            {/* Year Selector Dropdown */}
-            <div className="relative" ref={dropdownRef}>
+            {/* Year Navigation: Stepper [<] [2019-2024 Pills] [>] + Archives */}
+            <div className="flex items-center gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/10 text-[11px] font-mono">
               <button
-                onClick={() => setYearMenuOpen(!yearMenuOpen)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] border border-white/20 text-white font-mono text-[11px] font-bold transition-all shadow-sm"
+                onClick={() => {
+                  const prevYear = Math.max(1990, selectedYear - 1);
+                  setYear(prevYear);
+                }}
+                disabled={selectedYear <= 1990}
+                className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none transition-all"
+                title="Go back a year"
               >
-                <History size={12} className="text-zinc-400" />
-                <span>{selectedYear}</span>
-                <ChevronDown size={11} className={`text-zinc-400 transition-transform ${yearMenuOpen ? 'rotate-180' : ''}`} />
+                <ChevronLeft size={13} />
               </button>
 
-              {yearMenuOpen && (
-                <div className="absolute bottom-full mb-2 left-0 w-64 max-h-72 overflow-y-auto bg-black/95 border border-white/20 rounded-xl shadow-2xl p-2 z-50 backdrop-blur-2xl font-mono text-[11px] scrollbar-thin">
-                  <div className="px-2 py-1 text-[9px] uppercase tracking-wider text-zinc-500 font-semibold">
-                    Key Historical Deluges
-                  </div>
-                  <div className="grid grid-cols-2 gap-1 mb-2 pb-2 border-b border-white/10">
-                    {[
-                      { y: 2024, note: 'Recent' },
-                      { y: 2019, note: '375mm Surge' },
-                      { y: 2005, note: '566mm Deluge' },
-                      { y: 1991, note: '646mm Record' },
-                    ].map((item) => (
-                      <button
-                        key={item.y}
-                        onClick={() => {
-                          setYear(item.y);
-                          setYearMenuOpen(false);
-                        }}
-                        className={`px-2 py-1.5 rounded-lg text-left transition-all ${
-                          selectedYear === item.y
-                            ? 'bg-white text-black font-bold'
-                            : 'bg-white/[0.04] text-zinc-300 hover:bg-white/10 hover:text-white'
-                        }`}
-                      >
-                        <div className="font-bold">{item.y}</div>
-                        <div className="text-[9px] opacity-70 truncate">{item.note}</div>
-                      </button>
-                    ))}
-                  </div>
+              {/* Digital Twin Years 2019 to 2024 direct buttons */}
+              {DIGITAL_TWIN_YEARS.map((y) => (
+                <button
+                  key={y}
+                  onClick={() => setYear(y)}
+                  className={`px-2 py-1 rounded-lg transition-all font-bold ${
+                    selectedYear === y
+                      ? 'bg-white text-black shadow-sm'
+                      : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                  }`}
+                  title={`${y} Ward-Level Digital Twin Telemetry`}
+                >
+                  {y}
+                </button>
+              ))}
 
-                  <div className="px-2 py-1 text-[9px] uppercase tracking-wider text-zinc-500 font-semibold">
-                    All Recorded Years (1990 - 2024)
+              <button
+                onClick={() => {
+                  const nextYear = Math.min(2024, selectedYear + 1);
+                  setYear(nextYear);
+                }}
+                disabled={selectedYear >= 2024}
+                className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none transition-all"
+                title="Go forward a year"
+              >
+                <ChevronRight size={13} />
+              </button>
+
+              {/* Extended Historical Archives Dropdown (pre-2019) */}
+              <div className="relative border-l border-white/10 pl-1 ml-0.5" ref={dropdownRef}>
+                <button
+                  onClick={() => setYearMenuOpen(!yearMenuOpen)}
+                  className={`flex items-center gap-1 px-1.5 py-1 rounded-lg transition-all text-[10px] ${
+                    selectedYear < 2019
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold'
+                      : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                  }`}
+                  title="Historical Climate Archives (1990 - 2018)"
+                >
+                  <History size={11} className={selectedYear < 2019 ? 'text-amber-400' : 'text-zinc-400'} />
+                  <span>{selectedYear < 2019 ? selectedYear : 'Archives'}</span>
+                  <ChevronDown size={10} className={`text-zinc-400 transition-transform ${yearMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {yearMenuOpen && (
+                  <div className="absolute bottom-full mb-2 left-0 w-72 max-h-80 overflow-y-auto bg-black/95 border border-white/20 rounded-xl shadow-2xl p-2.5 z-50 backdrop-blur-2xl font-mono text-[11px] scrollbar-thin">
+                    <div className="px-2 py-1 text-[9px] uppercase tracking-wider text-emerald-400 font-bold flex items-center justify-between">
+                      <span>Digital Twin Telemetry</span>
+                      <span className="text-[8px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">2019 - 2024</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1 mb-2.5 pb-2 border-b border-white/10">
+                      {[2024, 2023, 2022, 2021, 2020, 2019].map((y) => ({
+                        y,
+                        note: getYearPeakNote(activeCity, y),
+                      })).map((item) => (
+                        <button
+                          key={item.y}
+                          onClick={() => {
+                            setYear(item.y);
+                            setYearMenuOpen(false);
+                          }}
+                          className={`px-2 py-1.5 rounded-lg text-left transition-all ${
+                            selectedYear === item.y
+                              ? 'bg-white text-black font-bold'
+                              : 'bg-white/[0.04] text-zinc-300 hover:bg-white/10 hover:text-white'
+                          }`}
+                        >
+                          <div className="font-bold">{item.y}</div>
+                          <div className="text-[9px] opacity-70 truncate">{item.note}</div>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="px-2 py-1 text-[9px] uppercase tracking-wider text-zinc-500 font-semibold">
+                      Municipal Archives (1990 - 2018)
+                    </div>
+                    <div className="grid grid-cols-2 gap-1 mb-2 pb-2 border-b border-white/10">
+                      {[
+                        { y: 2005, note: '566mm Cloudburst' },
+                        { y: 1991, note: '646mm Record' },
+                      ].map((item) => (
+                        <button
+                          key={item.y}
+                          onClick={() => {
+                            setYear(item.y);
+                            setYearMenuOpen(false);
+                          }}
+                          className={`px-2 py-1.5 rounded-lg text-left transition-all ${
+                            selectedYear === item.y
+                              ? 'bg-white text-black font-bold'
+                              : 'bg-white/[0.04] text-zinc-300 hover:bg-white/10 hover:text-white'
+                          }`}
+                        >
+                          <div className="font-bold">{item.y}</div>
+                          <div className="text-[9px] opacity-70 truncate">{item.note}</div>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="px-2 py-1 text-[9px] uppercase tracking-wider text-zinc-500 font-semibold">
+                      All Pre-2019 Years
+                    </div>
+                    <div className="grid grid-cols-4 gap-1">
+                      {AVAILABLE_YEARS.filter((y) => y < 2019).map((y) => (
+                        <button
+                          key={y}
+                          onClick={() => {
+                            setYear(y);
+                            setYearMenuOpen(false);
+                          }}
+                          className={`px-1.5 py-1 text-center rounded-lg transition-all ${
+                            selectedYear === y
+                              ? 'bg-white text-black font-bold'
+                              : 'text-zinc-400 hover:text-white hover:bg-white/10'
+                          }`}
+                        >
+                          {y}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-4 gap-1">
-                    {AVAILABLE_YEARS.map((y) => (
-                      <button
-                        key={y}
-                        onClick={() => {
-                          setYear(y);
-                          setYearMenuOpen(false);
-                        }}
-                        className={`px-1.5 py-1 text-center rounded-lg transition-all ${
-                          selectedYear === y
-                            ? 'bg-white text-black font-bold'
-                            : 'text-zinc-400 hover:text-white hover:bg-white/10'
-                        }`}
-                      >
-                        {y}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             {/* Month Filter Selector */}
@@ -274,12 +378,7 @@ export default function BottomPanel({ mode = 'floating' }: BottomPanelProps) {
               {relevantEvents.map((evt) => (
                 <button
                   key={evt.title}
-                  onClick={() => {
-                    if (selectedYear !== evt.year) {
-                      setYear(evt.year);
-                    }
-                    setTimeout(() => jumpToDate(evt.date), 50);
-                  }}
+                  onClick={() => jumpToDate(evt.date)}
                   className={`px-2 py-0.5 rounded-lg transition-all text-zinc-400 hover:text-white hover:bg-white/10 ${
                     td.date === evt.date ? 'bg-white text-black font-bold' : ''
                   }`}
@@ -294,14 +393,26 @@ export default function BottomPanel({ mode = 'floating' }: BottomPanelProps) {
           {/* High-Contrast Monochrome Status Badge */}
           <div className="flex items-center gap-2">
             {criticalWardsCount > 0 ? (
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white text-black font-mono text-[11px] font-bold shadow-[0_0_20px_rgba(255,255,255,0.25)] border border-white">
+              <div 
+                className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white text-black font-mono text-[11px] font-bold shadow-[0_0_20px_rgba(255,255,255,0.25)] border border-white"
+                title={`${criticalWardsCount} of ${totalWardsCount} wards in critical inundation state`}
+              >
                 <span className="w-2 h-2 rounded-full bg-black animate-ping" />
-                <span>{criticalWardsCount} WARDS CRITICAL</span>
+                <span>
+                  {criticalWardsCount}
+                  {totalWardsCount > 30 ? ` / ${totalWardsCount}` : ''} WARDS CRITICAL
+                </span>
               </div>
             ) : elevatedWardsCount > 0 ? (
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/10 border border-white/20 text-white font-mono text-[11px] font-semibold">
+              <div 
+                className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/10 border border-white/20 text-white font-mono text-[11px] font-semibold"
+                title={`${elevatedWardsCount} of ${totalWardsCount} wards in elevated risk state`}
+              >
                 <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                <span>{elevatedWardsCount} ELEVATED WATCH</span>
+                <span>
+                  {elevatedWardsCount}
+                  {totalWardsCount > 30 ? ` / ${totalWardsCount}` : ''} ELEVATED WATCH
+                </span>
               </div>
             ) : (
               <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/[0.04] border border-white/10 text-zinc-400 font-mono text-[11px]">

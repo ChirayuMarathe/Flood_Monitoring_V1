@@ -51,8 +51,13 @@ function scoreRainfallOverflow(rain3DaySum: number, soilMoisture: number): numbe
 function scoreTopographicPooling(
   twiMean: number,
   elevationMean: number,
+  rain3DaySum: number = 0,
   city: "mumbai" | "pune" | "navi_mumbai" = "mumbai"
 ): number {
+  // Topographic pooling requires rainwater volume to accumulate; dry/light rain (<35mm) cannot cause pooling
+  if (rain3DaySum < 35) return 0;
+  const rainWaterActivation = Math.min(1.0, (rain3DaySum - 35) / 150);
+
   if (city === 'pune') {
     // Pune elevation: Hadapsar=545m, Mundhwa=548m, Yerawada=555m (high pooling risk)
     // Hinjewadi=610m, Wakad=605m, Kothrud=580m (safe from pooling)
@@ -67,7 +72,7 @@ function scoreTopographicPooling(
       ? Math.min(1.0, (twiMean - 6.4) / 2.2)
       : 0;
 
-    return elevFactor * twiFactor;
+    return elevFactor * twiFactor * rainWaterActivation;
   }
 
   if (city === 'navi_mumbai') {
@@ -84,7 +89,7 @@ function scoreTopographicPooling(
       ? Math.min(1.0, (twiMean - 7.8) / 2.2)
       : 0;
 
-    return elevFactor * twiFactor;
+    return elevFactor * twiFactor * rainWaterActivation;
   }
 
   // Mumbai island baseline: full risk below 8m, no risk above 30m
@@ -98,7 +103,7 @@ function scoreTopographicPooling(
     ? Math.min(1.0, (twiMean - 8.0) / 3.0)
     : 0;
 
-  return elevFactor * twiFactor;
+  return elevFactor * twiFactor * rainWaterActivation;
 }
 
 /**
@@ -150,18 +155,30 @@ function scoreRiverOverflow(
 }
 
 /**
- * Derive overall severity (0-3) from the list of active hazard factors.
+ * Derive overall severity (0-3) from the list of active hazard factors and rain volume.
+ * 
+ * Rules:
+ * - Severity 0 (Nominal): Minimal risk or dry weather (< 35mm).
+ * - Severity 1 (Watch): Single moderate factor under watch.
+ * - Severity 2 (Elevated): Single high factor (heavy rain alone 140-250mm) OR moderate compound factors.
+ * - Severity 3 (Critical): Strict threshold requiring:
+ *   1) Severe Compound Multi-hazard (at least 2 interacting hazards like rain + tide/pooling with score >= 0.65), OR
+ *   2) Catastrophic Cloudburst Deluge (> 260mm extreme rainfall with score >= 0.85).
+ *   A single non-deluge factor NEVER unilaterally triggers Severity 3!
  */
-function deriveSeverityFromHazards(hazards: HazardFactor[]): 0 | 1 | 2 | 3 {
-  if (hazards.length === 0) return 0;
+function deriveSeverityFromHazards(hazards: HazardFactor[], rain3DaySum: number = 0): 0 | 1 | 2 | 3 {
+  if (hazards.length === 0 || rain3DaySum < 35) return 0;
 
   const totalScore = hazards.reduce((sum, h) => sum + h.contributionScore, 0);
   const compoundMultiplier = hazards.length > 1 ? 1.0 + (hazards.length - 1) * 0.15 : 1.0;
   const adjustedScore = Math.min(1.0, totalScore * compoundMultiplier);
 
-  if (adjustedScore > 0.6) return 3;
-  if (adjustedScore > 0.35) return 2;
-  if (adjustedScore > 0.15) return 1;
+  const isExtremeDeluge = rain3DaySum >= 260 && adjustedScore >= 0.85;
+  const isCompoundCritical = hazards.length >= 2 && adjustedScore >= 0.65;
+
+  if (isExtremeDeluge || isCompoundCritical) return 3;
+  if (adjustedScore >= 0.45 || (hazards.length >= 2 && adjustedScore >= 0.35)) return 2;
+  if (adjustedScore >= 0.15) return 1;
   return 0;
 }
 
@@ -267,8 +284,14 @@ export function findSimilarHistoricalEvent(
   const numericGid = typeof wardIdentifier === 'number'
     ? wardIdentifier
     : parseInt(String(wardIdentifier).replace(/\D/g, ''), 10);
+  const wardStr = String(wardIdentifier).trim().toUpperCase();
+  const cleanWard = wardStr.replace(/^(MUMBAI|PUNE|NAVI_MUMBAI)_/, '');
 
-  const wardRows = trainingTable.filter(r => r.wardGid === numericGid);
+  const wardRows = trainingTable.filter(r => 
+    (!isNaN(numericGid) && numericGid > 0 && r.wardGid === numericGid) ||
+    (r.wardName && r.wardName.trim().toUpperCase() === cleanWard) ||
+    (r.wardName && r.wardName.trim().toUpperCase() === wardStr)
+  );
   if (wardRows.length === 0) return null;
 
   let closestRow: TrainingTableRow | null = null;
@@ -337,7 +360,7 @@ export function computeRiskProfile(
   }
 
   // 2. Topographic pooling (city-specific elevation & TWI baseline)
-  const poolingScore = scoreTopographicPooling(zonalStats.twiMean, zonalStats.elevationMean, city);
+  const poolingScore = scoreTopographicPooling(zonalStats.twiMean, zonalStats.elevationMean, climate.rain3DaySum, city);
   if (poolingScore > 0.15) {
     hazards.push({
       type: "topographic_pooling",
@@ -389,7 +412,7 @@ export function computeRiskProfile(
       ? "compound"
       : hazards[0].type;
 
-  const overallSeverity = deriveSeverityFromHazards(hazards);
+  const overallSeverity = deriveSeverityFromHazards(hazards, climate.rain3DaySum);
   const rainfallTrend = computeRainfallTrend(climate);
   const estimatedTime = estimateTimeToThreshold(climate, overallSeverity);
 

@@ -16,6 +16,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (!riskDataLoaded) initRiskData();
   }, [updateSeverities, initRiskData, riskDataLoaded]);
 
+  const activeCity = useFloodStore((s) => s.activeCity);
+
+  const cityCoords: Record<string, string> = {
+    mumbai: 'LAT: 19.0821° N | LON: 72.8785° E (BMC)',
+    pune: 'LAT: 18.5252° N | LON: 73.8573° E (PMC)',
+    navi_mumbai: 'LAT: 19.0904° N | LON: 73.0095° E (NMMC)',
+  };
+
   return (
     <div className="w-screen h-screen bg-black text-white font-satoshi flex overflow-hidden relative">
       {/* Background Wave Canvas Animation */}
@@ -30,7 +38,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <CommandBar />
           <div className="flex items-center gap-3 text-xs font-mono text-gray-400">
             <span className="px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-[10px] tracking-wider">
-              LAT: 19.0760° N | LON: 72.8777° E
+              {cityCoords[activeCity] || cityCoords.mumbai}
             </span>
           </div>
         </header>

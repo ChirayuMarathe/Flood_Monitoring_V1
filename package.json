@@ -9,6 +9,8 @@
     "build": "node scripts/patch_spz.js && npm run copy-cesium && next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
+    "ml:server": "python ml/server/api_server.py",
+    "ml:train": "python ml/server/train_and_save.py",
     "db:push": "prisma db push --accept-data-loss",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
