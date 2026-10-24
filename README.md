@@ -1,4 +1,4 @@
-# Mumbai Flood Command Center 🌊
+# Mumbai Flood Command Center 
 
 An enterprise-grade, 3D geospatial command center designed for monitoring, analyzing, and predicting flood severities across the 24 municipal wards of Mumbai. Built with Next.js, Tailwind CSS, and CesiumJS.
 
